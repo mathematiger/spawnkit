@@ -10,41 +10,41 @@
   "measurements": [
     {
       "context": {
-        "aggregate_calls_per_s": 15.0,
+        "aggregate_calls_per_s": 339.7,
         "batch_window_ms": 0.0,
-        "calls_per_client": 60,
+        "calls_per_client": 200,
         "clients": 4,
         "cuda_graph": false,
         "device": "cpu",
         "transport": "queue",
-        "wall_s": 15.968
+        "wall_s": 2.355
       },
-      "iterations": 240,
-      "mean_ms": 152.56495267083335,
-      "min_ms": 0.643285,
+      "iterations": 800,
+      "mean_ms": 1.34545907125,
+      "min_ms": 0.702305,
       "name": "service/queue",
-      "ops_per_s": 6.5545853257500815,
-      "p50_ms": 2.033502,
-      "p99_ms": 649.907539
+      "ops_per_s": 743.2407431546387,
+      "p50_ms": 1.41964,
+      "p99_ms": 1.902826
     },
     {
       "context": {
-        "aggregate_calls_per_s": 91.8,
+        "aggregate_calls_per_s": 338.1,
         "batch_window_ms": 0.0,
-        "calls_per_client": 60,
+        "calls_per_client": 200,
         "clients": 4,
         "cuda_graph": false,
         "device": "cpu",
         "transport": "shared_mem",
-        "wall_s": 2.616
+        "wall_s": 2.366
       },
-      "iterations": 240,
-      "mean_ms": 1.2885920208333335,
-      "min_ms": 0.788263,
+      "iterations": 800,
+      "mean_ms": 1.3274170262499998,
+      "min_ms": 0.686965,
       "name": "service/shared_mem",
-      "ops_per_s": 776.0408134091186,
-      "p50_ms": 1.279119,
-      "p99_ms": 1.576077
+      "ops_per_s": 753.342755309562,
+      "p50_ms": 1.320791,
+      "p99_ms": 1.569549
     }
   ]
 }

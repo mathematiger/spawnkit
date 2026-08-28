@@ -190,6 +190,25 @@ class BatchedInferenceService:
     :param batch_window_ms: latency floor for batch fill. ``0`` keeps the opportunistic drain.
     :param shared_rows: buffers for RPCs that declare the shared-memory transport. Must be the same
         object every client received.
+    :param intra_op_threads: torch intra-op threads inside the service process. **The default of 1
+        is not a throttle, it is a guard.** torch defaults to one thread per core, which is the wrong
+        default for a process sharing a node with N worker processes: the service's threads and the
+        workers oversubscribe the cores between them, and every parallel region then waits on a
+        thread that cannot get scheduled. Measured end to end with 4 clients on a 40-core node, the
+        service's round trip was p50 582 ms unpinned and p50 1.42 ms pinned to one thread
+        (``benchmarks/results/service.json``, ``benchmarks/results/threads.json``).
+
+        Two things make it a trap rather than a tuning question, and both are reasons a profiler
+        will not find it. It does not appear on an **idle** node: an unpinned forward measured alone
+        is within 1.7x of a pinned one, so profiling the service by itself says nothing is wrong. And
+        it does not appear at **batch 1**, which takes a serial fast path, so every single-client
+        smoke test measures the one case that looks fine. With 8 competing processes on a 40-core
+        node the reference forward measured 0.369 ms unpinned at batch 1 and 277.8 ms unpinned at
+        batch 4, against 0.455 ms pinned — 610x, from a knob that reads like a throttle
+        (``benchmarks/results/threads.json``).
+
+        Raise it only if your forward is genuinely compute-bound and the service has cores of its
+        own, and measure under real client load when you do. ``None`` leaves torch's setting alone.
     :param graph_rpcs: names of RPCs to accelerate with CUDA-graph replay. Only RPCs that implement
         :meth:`~spawnkit.service.rpc.Rpc.to_tensors` are eligible; others are ignored with a warning.
     :param max_graph_rows: widest batch to capture a graph for.
@@ -209,6 +228,7 @@ class BatchedInferenceService:
         max_batch: int = 0,
         batch_window_ms: float = 0.0,
         shared_rows: SharedRows | None = None,
+        intra_op_threads: int | None = 1,
         graph_rpcs: Sequence[str] = (),
         max_graph_rows: int = 512,
         name: str = "BatchedInferenceService",
@@ -225,6 +245,7 @@ class BatchedInferenceService:
         self._max_batch = int(max_batch) or len(self._resp_qs)
         self._batch_window_s = max(0.0, float(batch_window_ms)) / 1000.0
         self._rows = shared_rows
+        self._intra_op_threads = intra_op_threads
         self._graph_rpcs = tuple(graph_rpcs)
         self._max_graph_rows = int(max_graph_rows)
         self._runners: dict[str, GraphRunner] = {}
@@ -259,12 +280,21 @@ class BatchedInferenceService:
         Called in the service process by :meth:`start`. Run it directly only if you are placing the
         service yourself, and only in a process that has not already initialised torch's thread pool.
         """
+        if self._intra_op_threads is not None:
+            torch.set_num_threads(self._intra_op_threads)
+
         model = build_model_or_stop(lambda: self._build_fn(self._device), self._stop, self._name)
         if model is None:
             return
 
         self._build_graph_runners(model)
-        log.info("[%s] up on %s (max_batch=%d)", self._name, self._device, self._max_batch)
+        log.info(
+            "[%s] up on %s (max_batch=%d, intra_op_threads=%s)",
+            self._name,
+            self._device,
+            self._max_batch,
+            torch.get_num_threads(),
+        )
         stats = BatchFillStats(self._name)
 
         run_worker_loop(

@@ -1,0 +1,321 @@
+{
+  "contenders": 8,
+  "default_intra_op_threads": 40,
+  "environment": {
+    "cpu_count": 40,
+    "cuda_available": false,
+    "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "processor": "x86_64",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128"
+  },
+  "measurements": [
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 1
+      },
+      "iterations": 150,
+      "mean_ms": 0.37933306,
+      "min_ms": 0.360007,
+      "name": "forward/threads=1/batch=1",
+      "ops_per_s": 2636.2057659830652,
+      "p50_ms": 0.376137,
+      "p99_ms": 0.436926
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 1
+      },
+      "iterations": 150,
+      "mean_ms": 0.45997743333333335,
+      "min_ms": 0.441136,
+      "name": "forward/threads=1/batch=4",
+      "ops_per_s": 2174.0196964735155,
+      "p50_ms": 0.454976,
+      "p99_ms": 0.481586
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 1
+      },
+      "iterations": 150,
+      "mean_ms": 0.5894775133333333,
+      "min_ms": 0.571415,
+      "name": "forward/threads=1/batch=16",
+      "ops_per_s": 1696.4175517828915,
+      "p50_ms": 0.590616,
+      "p99_ms": 0.607776
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 1
+      },
+      "iterations": 150,
+      "mean_ms": 1.0721412866666666,
+      "min_ms": 1.053422,
+      "name": "forward/threads=1/batch=64",
+      "ops_per_s": 932.712891888571,
+      "p50_ms": 1.069662,
+      "p99_ms": 1.100451
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 1
+      },
+      "iterations": 150,
+      "mean_ms": 3.025717033333333,
+      "min_ms": 2.967437,
+      "name": "forward/threads=1/batch=256",
+      "ops_per_s": 330.5001720198312,
+      "p50_ms": 3.010867,
+      "p99_ms": 3.222435
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 2
+      },
+      "iterations": 150,
+      "mean_ms": 0.37562448,
+      "min_ms": 0.360538,
+      "name": "forward/threads=2/batch=1",
+      "ops_per_s": 2662.233302792193,
+      "p50_ms": 0.371337,
+      "p99_ms": 0.418837
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 2
+      },
+      "iterations": 150,
+      "mean_ms": 0.48851449333333336,
+      "min_ms": 0.460297,
+      "name": "forward/threads=2/batch=4",
+      "ops_per_s": 2047.0221736444148,
+      "p50_ms": 0.479626,
+      "p99_ms": 0.562786
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 2
+      },
+      "iterations": 150,
+      "mean_ms": 0.5708159066666667,
+      "min_ms": 0.538255,
+      "name": "forward/threads=2/batch=16",
+      "ops_per_s": 1751.8782996773764,
+      "p50_ms": 0.571075,
+      "p99_ms": 0.643565
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 2
+      },
+      "iterations": 150,
+      "mean_ms": 0.8855818066666665,
+      "min_ms": 0.841474,
+      "name": "forward/threads=2/batch=64",
+      "ops_per_s": 1129.2011562026144,
+      "p50_ms": 0.883653,
+      "p99_ms": 0.939073
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 2
+      },
+      "iterations": 150,
+      "mean_ms": 2.1251646133333333,
+      "min_ms": 2.040335,
+      "name": "forward/threads=2/batch=256",
+      "ops_per_s": 470.5517839540411,
+      "p50_ms": 2.107603,
+      "p99_ms": 2.371832
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 8
+      },
+      "iterations": 150,
+      "mean_ms": 0.3723161133333333,
+      "min_ms": 0.357227,
+      "name": "forward/threads=8/batch=1",
+      "ops_per_s": 2685.889662542495,
+      "p50_ms": 0.367058,
+      "p99_ms": 0.449477
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 8
+      },
+      "iterations": 150,
+      "mean_ms": 0.5181896533333333,
+      "min_ms": 0.492596,
+      "name": "forward/threads=8/batch=4",
+      "ops_per_s": 1929.7953819945049,
+      "p50_ms": 0.515206,
+      "p99_ms": 0.614086
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 8
+      },
+      "iterations": 150,
+      "mean_ms": 0.6027278666666667,
+      "min_ms": 0.583186,
+      "name": "forward/threads=8/batch=16",
+      "ops_per_s": 1659.123553603738,
+      "p50_ms": 0.601846,
+      "p99_ms": 0.634515
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 8
+      },
+      "iterations": 150,
+      "mean_ms": 0.9544802066666667,
+      "min_ms": 0.915443,
+      "name": "forward/threads=8/batch=64",
+      "ops_per_s": 1047.690662431128,
+      "p50_ms": 0.951683,
+      "p99_ms": 1.025522
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 8
+      },
+      "iterations": 150,
+      "mean_ms": 2.27406012,
+      "min_ms": 2.095454,
+      "name": "forward/threads=8/batch=256",
+      "ops_per_s": 439.74211200713546,
+      "p50_ms": 2.241633,
+      "p99_ms": 2.869758
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 40
+      },
+      "iterations": 150,
+      "mean_ms": 0.3710311866666666,
+      "min_ms": 0.350587,
+      "name": "forward/threads=40/batch=1",
+      "ops_per_s": 2695.191229028403,
+      "p50_ms": 0.368847,
+      "p99_ms": 0.406527
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 40
+      },
+      "iterations": 150,
+      "mean_ms": 283.04176366,
+      "min_ms": 261.13669,
+      "name": "forward/threads=40/batch=4",
+      "ops_per_s": 3.5330475159179553,
+      "p50_ms": 277.803919,
+      "p99_ms": 354.014621
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 40
+      },
+      "iterations": 150,
+      "mean_ms": 280.87647501333333,
+      "min_ms": 259.205735,
+      "name": "forward/threads=40/batch=16",
+      "ops_per_s": 3.560283928914052,
+      "p50_ms": 275.703506,
+      "p99_ms": 323.59821
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 40
+      },
+      "iterations": 150,
+      "mean_ms": 284.83652083333334,
+      "min_ms": 262.306192,
+      "name": "forward/threads=40/batch=64",
+      "ops_per_s": 3.5107857555426714,
+      "p50_ms": 279.25197,
+      "p99_ms": 349.343193
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cpu",
+        "threads": 40
+      },
+      "iterations": 150,
+      "mean_ms": 313.42213834666666,
+      "min_ms": 288.24913,
+      "name": "forward/threads=40/batch=256",
+      "ops_per_s": 3.190585085262645,
+      "p50_ms": 308.464552,
+      "p99_ms": 389.851766
+    }
+  ],
+  "worst_over_best_p50": {
+    "batch=1": 1.0,
+    "batch=16": 482.8,
+    "batch=256": 146.4,
+    "batch=4": 610.6,
+    "batch=64": 316.0
+  }
+}
