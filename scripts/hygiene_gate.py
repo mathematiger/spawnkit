@@ -139,6 +139,11 @@ PER_FILE_PATTERN_EXEMPTIONS: dict[str, frozenset[str]] = {
 #: allowed); other entries match a repository-relative path, a path prefix, or a glob.
 DEFAULT_EXCLUDES: tuple[str, ...] = (
     ".git/",
+    # Exploratory benchmark and profiler output, gitignored and never published. A profiler writes
+    # the host name and absolute run paths into its metadata, so this directory legitimately holds
+    # what the gate forbids - and a gate that fires on untracked scratch output is a gate people
+    # learn to ignore. Only benchmarks/results/ is committed, and it is scanned.
+    "benchmarks/scratch",
     ".venv/",
     "venv/",
     "__pycache__/",

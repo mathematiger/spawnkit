@@ -211,15 +211,25 @@ def shutdown_processes(
     terminate_timeout: float = 1.0,
     kill_timeout: float = 0.5,
 ) -> None:
-    """Stop a pool of workers: one *shared* grace window for all of them, then force the stragglers.
+    """Stop a pool of workers in *three shared windows*, so teardown cost does not scale with N.
 
-    The shared deadline is the whole point. Joining each process for its own timeout before even
-    trying to terminate it makes shutdown cost ``num_workers x timeout`` — at realistic worker counts
-    that is a minute-long cleanup, long enough that a second Ctrl+C forces an unclean ``os._exit()``
-    and drops the buffered log tail, which is exactly the tail explaining why the run ended. The
-    workers all wind down in parallel once their stop event is set, so they only need *one* window
-    between them; the pass below hands each one whatever is left of it and force-stops only those
-    still alive at the end.
+    The naive teardown gives each worker its own timeout, making shutdown cost ``N x timeout``. At
+    realistic worker counts that is a minute-long cleanup — long enough that an impatient second
+    Ctrl+C forces an unclean exit and drops the buffered log tail, which is the part that says why
+    the run ended. A shutdown slow enough to be interrupted loses the diagnosis.
+
+    Every phase here is therefore a *signal to everyone, then one wait*:
+
+    1. join everyone within one shared ``graceful_timeout``;
+    2. ``SIGTERM`` every straggler, then join them within one shared ``terminate_timeout``;
+    3. ``SIGKILL`` whatever is left, then join within one shared ``kill_timeout``.
+
+    Total cost is bounded by ``graceful + terminate + kill`` no matter how many workers there are.
+    Sharing only the *first* window is not enough and is an easy mistake to make: measured with 16
+    deliberately stuck workers and a 1 s window, a version that force-stopped stragglers one at a
+    time took 17.9 s, against 4.0 s for the naive per-worker join it was supposed to beat — the
+    graceful phase was shared and the force-stop phase was still serial
+    (``benchmarks/results/shutdown.json``).
 
     The caller sets the stop event (and wakes any consumer blocked on a queue) *before* calling this
     — the grace window is time for workers to notice a signal that has already been sent, not a
@@ -227,15 +237,34 @@ def shutdown_processes(
 
     :param named_processes: ``(label, process)`` pairs; the label appears in the force-stop log.
     :param graceful_timeout: seconds shared across all workers to exit on their own.
-    :param terminate_timeout: seconds a straggler gets to die on ``SIGTERM`` before ``SIGKILL``.
-    :param kill_timeout: seconds to wait after ``SIGKILL`` before giving up on the pid.
+    :param terminate_timeout: seconds shared across all stragglers to die on ``SIGTERM``.
+    :param kill_timeout: seconds shared across all survivors to die on ``SIGKILL``.
     """
-    deadline = time.time() + graceful_timeout
-    for _, process in named_processes:
-        # max(): once the window is spent the remaining joins still poll rather than block forever.
-        safe_join(process, timeout=max(0.05, deadline - time.time()))
+    _join_all_within(named_processes, graceful_timeout)
 
-    for name, process in named_processes:
-        if safe_is_alive(process):
+    stragglers = [(name, p) for name, p in named_processes if safe_is_alive(p)]
+    if stragglers:
+        for name, process in stragglers:
             log.info("  Force-stopping %s...", name)
-            graceful_shutdown(process, name, terminate_timeout, kill_timeout)
+            safe_terminate(process)
+        _join_all_within(stragglers, terminate_timeout)
+
+        survivors = [(name, p) for name, p in stragglers if safe_is_alive(p)]
+        for name, process in survivors:
+            log.warning("  %s ignored SIGTERM; killing it", name)
+            safe_kill(process)
+        _join_all_within(survivors, kill_timeout)
+
+    for _, process in named_processes:
+        safe_close(process)
+
+
+def _join_all_within(named_processes: NamedProcesses, window: float) -> None:
+    """Join every process, sharing one ``window`` between them rather than one window each.
+
+    The ``max()`` floor matters: once the window is spent the remaining joins still *poll* rather
+    than block forever, so a pool larger than the window can absorb still finishes this phase.
+    """
+    deadline = time.monotonic() + window
+    for _, process in named_processes:
+        safe_join(process, timeout=max(0.05, deadline - time.monotonic()))
