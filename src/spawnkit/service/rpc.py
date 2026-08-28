@@ -216,12 +216,13 @@ class TensorRpc(Rpc):
             if value is not None:
                 arrays[field] = value.detach().cpu().numpy()
 
+        total_rows = sum(row_counts)
         responses: list[Response] = []
         start = 0
         for count in row_counts:
             stop = start + count
             responses.append({
-                field: _take_rows(array, start, stop, self.row_axis)
+                field: _take_rows(array, start, stop, self.row_axis, total_rows)
                 for field, array in arrays.items()
             })
             start = stop
@@ -241,14 +242,26 @@ class TensorRpc(Rpc):
         return int(np.asarray(payload[0]).shape[self.input_axes[0]])
 
 
-def _take_rows(array: np.ndarray, start: int, stop: int, axis: int) -> np.ndarray:
-    """Slice ``array[start:stop]`` along ``axis``, falling back to axis 0 for a lower-rank array.
+def _take_rows(array: np.ndarray, start: int, stop: int, axis: int, total_rows: int) -> np.ndarray:
+    """Slice ``array[start:stop]`` along whichever axis actually holds the batch.
 
-    The fallback is what lets one call return both an ``[layers, batch, hidden]`` recurrent state
-    (batch on axis 1) and a ``[batch, values]`` head (batch on axis 0) without the caller declaring
-    an axis per field.
+    One call can return fields that batch on different axes — an ``[layers, batch, hidden]``
+    recurrent state batches on axis 1 while a ``[batch, values]`` head beside it batches on axis 0 —
+    so ``row_axis`` is a preference, not an instruction, and the batch axis is *identified* rather
+    than assumed.
+
+    Identified by extent: the declared ``row_axis`` is used only when the field is actually that long
+    along it. Rank alone is not enough and choosing by rank was a bug — a ``[batch, values]`` head has
+    rank 2, so a ``row_axis`` of 1 sliced it along ``values``, handing every request the whole batch
+    and silently dropping columns from the last one. No exception, no shape error at the client: the
+    exact "misattributes results between clients" failure this module warns about.
+
+    When both candidate axes have length ``total_rows`` the declaration wins, since nothing else can
+    break the tie. If your outputs are genuinely ambiguous that way, subclass :class:`Rpc` and write
+    ``split`` yourself rather than relying on a heuristic to guess right.
     """
-    effective = axis if array.ndim > axis else 0
+    prefers_declared = array.ndim > axis and array.shape[axis] == total_rows
+    effective = axis if prefers_declared else 0
     index: list[Any] = [slice(None)] * array.ndim
     index[effective] = slice(start, stop)
     return array[tuple(index)]
