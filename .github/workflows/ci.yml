@@ -42,3 +42,28 @@ jobs:
       - name: Pytest
         # The runner is CPU-only; the service tier's GPU tests carry the `gpu` marker.
         run: pytest -q -m "not gpu"
+
+  service:
+    # The matrix above deliberately installs no torch, which is what keeps the torch-free promise
+    # honest - but it also means the service tier, the most intricate code here, would go untested.
+    # This job installs the CPU torch build and runs it. GPU-only tests carry the `gpu` marker and
+    # are deselected: a hosted runner has no device.
+    name: service tier (cpu torch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install with CPU torch
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -e ".[dev]"
+
+      - name: Pytest
+        run: pytest -q -m "not gpu"
