@@ -1,0 +1,53 @@
+site_name: spawnkit
+site_description: Process hygiene, worker supervision and batched GPU inference for spawn-mode multiprocessing
+site_url: https://mathematiger.github.io/spawnkit/
+repo_url: https://github.com/mathematiger/spawnkit
+repo_name: mathematiger/spawnkit
+edit_uri: ""
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Switch to dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Switch to light mode}
+
+plugins:
+  - search
+  - gen-files:
+      scripts: [docs/gen_api.py]
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          # griffe reads the package from the AST rather than importing it, so the docs build needs
+          # neither torch nor a CUDA runtime and finishes in seconds.
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc: {permalink: true}
+
+nav:
+  - Home: index.md
+  - Benchmarks: benchmarks.md
+  - Profiler feedback: profiling-feedback.md
+  - API: api/

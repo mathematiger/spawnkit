@@ -44,6 +44,13 @@ dependencies = ["numpy>=1.21"]
 [project.optional-dependencies]
 torch = ["torch>=2.0"]
 bench = ["torch>=2.0"]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+    "mkdocs-gen-files>=0.5",
+    "mkdocs-literate-nav>=0.6",
+    "mkdocs-section-index>=0.3",
+]
 dev = [
     "pytest>=8.0",
     "pytest-timeout>=2.4",
