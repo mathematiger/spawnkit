@@ -26,6 +26,21 @@ a measurable share of the round trip.
 
 from __future__ import annotations
 
+try:
+    import torch as _torch
+except ImportError as _exc:  # pragma: no cover - exercised by the packaging check, not the suite
+    # The base install deliberately omits torch, so this is the expected failure for anyone who
+    # reached for the service tier without asking for it. A bare "No module named 'torch'" sends
+    # them looking for a bug in their environment; naming the extra makes it a one-line fix.
+    _MESSAGE = (
+        "spawnkit.service requires PyTorch, which the base install deliberately omits so that the "
+        "hygiene and supervision tiers stay dependency-light. Install it with:\n"
+        "    pip install 'spawnkit[torch]'"
+    )
+    raise ImportError(_MESSAGE) from _exc
+else:
+    del _torch
+
 from spawnkit.service.batched import (
     BatchedInferenceService,
     BatchFillStats,
