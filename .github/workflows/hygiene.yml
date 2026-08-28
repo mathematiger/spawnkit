@@ -1,0 +1,28 @@
+name: hygiene
+
+# Fails the build if a forbidden string reaches the tree: vendor or institution names,
+# machine-local absolute paths, cluster scheduler flags, private package names, or the shape of a
+# leaked credential.
+#
+# The pattern list lives in scripts/hygiene_gate.py and nowhere else, so the gate a contributor runs
+# before pushing is byte-for-byte the gate CI runs. This file only calls it.
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+jobs:
+  gate:
+    name: forbidden strings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The gate is dependency-free stdlib, so there is nothing to install.
+      - name: Hygiene gate
+        run: python scripts/hygiene_gate.py

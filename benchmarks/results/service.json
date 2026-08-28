@@ -1,0 +1,50 @@
+{
+  "environment": {
+    "cpu_count": 40,
+    "cuda_available": false,
+    "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "processor": "x86_64",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128"
+  },
+  "measurements": [
+    {
+      "context": {
+        "aggregate_calls_per_s": 15.0,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 60,
+        "clients": 4,
+        "cuda_graph": false,
+        "device": "cpu",
+        "transport": "queue",
+        "wall_s": 15.968
+      },
+      "iterations": 240,
+      "mean_ms": 152.56495267083335,
+      "min_ms": 0.643285,
+      "name": "service/queue",
+      "ops_per_s": 6.5545853257500815,
+      "p50_ms": 2.033502,
+      "p99_ms": 649.907539
+    },
+    {
+      "context": {
+        "aggregate_calls_per_s": 91.8,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 60,
+        "clients": 4,
+        "cuda_graph": false,
+        "device": "cpu",
+        "transport": "shared_mem",
+        "wall_s": 2.616
+      },
+      "iterations": 240,
+      "mean_ms": 1.2885920208333335,
+      "min_ms": 0.788263,
+      "name": "service/shared_mem",
+      "ops_per_s": 776.0408134091186,
+      "p50_ms": 1.279119,
+      "p99_ms": 1.576077
+    }
+  ]
+}

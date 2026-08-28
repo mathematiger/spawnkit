@@ -1,0 +1,58 @@
+# Byte-compiled / optimised
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build and packaging artifacts
+build/
+dist/
+wheels/
+*.egg
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.tox/
+.nox/
+.cache/
+
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Docs build output
+site/
+docs/_build/
+
+# Editors and OS noise
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Benchmark scratch: raw traces, profiles and half-finished sweeps stay local.
+benchmarks/scratch/
+*.nsys-rep
+*.sqlite
+
+# benchmarks/results/ is deliberately NOT ignored. Every number printed in the README or the docs
+# must trace back to a committed JSON file under benchmarks/results/, so those files are part of the
+# repository, not build output. The negation below is belt-and-braces against a future broad rule.
+!benchmarks/results/
+!benchmarks/results/**

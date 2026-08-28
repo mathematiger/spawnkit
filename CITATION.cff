@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: spawnkit
+abstract: >-
+  Process hygiene, worker supervision and batched GPU inference for spawn-mode
+  multiprocessing: keeping CPU-only workers off the GPU, making one seed reproduce
+  a run across spawn, turning a silent worker death into a fast and explained
+  shutdown, and serving batched inference from a single GPU process.
+type: software
+authors:
+  - name: mathematiger
+license: Apache-2.0
+version: 0.1.0.dev0
+repository-code: "https://github.com/mathematiger/spawnkit"
+url: "https://github.com/mathematiger/spawnkit"
+keywords:
+  - multiprocessing
+  - spawn
+  - worker-supervision
+  - reinforcement-learning
+  - pytorch
+  - cuda
+  - inference-server
