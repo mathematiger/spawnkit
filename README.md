@@ -171,6 +171,17 @@ verifies the graphed output against an eager run bit-for-bit and disables itself
 
 ---
 
+## Examples
+
+Both run end to end and are checked by hand on every change; neither is pseudocode.
+
+- [`examples/sb3_hygiene.py`](examples/sb3_hygiene.py) — Stable-Baselines3's `SubprocVecEnv` with
+  the two parent-side context managers. You do not have to write your own worker pool to hit these
+  failures; measured on a 40-core node, it takes each of 4 workers from 40 torch threads to 1.
+- [`examples/ensemble_q_service.py`](examples/ensemble_q_service.py) — K CPU workers stepping
+  Gymnasium environments through one batched ensemble-Q service, supervised by a `WorkerMonitor`.
+  No tree search, no planning, no learning: it is the plumbing, in the order a launcher uses it.
+
 ## When *not* to use this
 
 Being honest about this is more useful than a longer feature list.
