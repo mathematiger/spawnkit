@@ -367,23 +367,30 @@ def test_shutdown_processes_shares_one_grace_window_across_the_pool() -> None:
     Joining each worker for its own timeout costs ``num_workers x timeout``; at realistic worker
     counts that is a minute-long cleanup, long enough that a second Ctrl+C forces an unclean
     ``os._exit()`` and drops the buffered log tail — which is the tail explaining why the run ended.
-    Five runaway workers under a 0.2 s window must therefore cost ~0.2 s of *waiting*, not 1.0 s.
+    Five runaway workers under a 1 s window must therefore cost ~1 s of *waiting*, not 5 s.
+
+    The window is a full second rather than the 0.2 s that would make this test quick, and that is
+    deliberate. The bound has to separate "one shared window" from "one window each" on a busy CI
+    runner whose process teardown is itself worth a few hundred milliseconds, so the *signal* has to
+    be much larger than that noise. With a 0.2 s window the two strategies are 0.2 s and 1.0 s apart
+    and any bound between them sits within noise of the passing case; at 1 s they are 1 s and 5 s
+    apart, and 3 s discriminates with a two-second margin on either side. Widening the separation is
+    what makes this reliable - widening the tolerance would only have made it stop testing anything.
     """
     processes = [_spawn(_idle_forever) for _ in range(5)]
     try:
         started = time.monotonic()
         shutdown_processes(
             [(f"worker_{index}", process) for index, process in enumerate(processes)],
-            graceful_timeout=0.2,
+            graceful_timeout=1.0,
             terminate_timeout=1.0,
             kill_timeout=0.5,
         )
         elapsed = time.monotonic() - started
 
         assert not any(safe_is_alive(process) for process in processes)
-        # Generous bound: the assertion is "one shared window", not a benchmark. A per-process
-        # window would spend 5 x 0.2 s waiting before terminating anything.
-        assert elapsed < 0.7, f"shutdown took {elapsed:.2f}s - the grace window is not being shared"
+        # A per-process window would spend 5 x 1 s waiting before terminating anything.
+        assert elapsed < 3.0, f"shutdown took {elapsed:.2f}s - the grace window is not being shared"
     finally:
         for process in processes:
             _reaped(process)

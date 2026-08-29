@@ -41,7 +41,23 @@ jobs:
 
       - name: Pytest
         # The runner is CPU-only; the service tier's GPU tests carry the `gpu` marker.
-        run: pytest -q -m "not gpu"
+        # Output is mirrored into the job summary on failure so the reason is readable from the
+        # checks API without downloading the log, which needs a token a contributor may not have.
+        run: |
+          set -o pipefail
+          pytest -q -m "not gpu" -rf --timeout=300 2>&1 | tee pytest.log
+        shell: bash
+
+      - name: Report failures
+        if: failure()
+        run: |
+          {
+            echo "### pytest failed on python ${{ matrix.python-version }}"
+            echo '```'
+            tail -n 120 pytest.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
 
   service:
     # The matrix above deliberately installs no torch, which is what keeps the torch-free promise
