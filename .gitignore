@@ -62,3 +62,6 @@ dist/
 
 # mkdocs build output.
 site/
+
+# CI mirrors pytest output here so a failure can be annotated; never committed.
+pytest.log
