@@ -48,15 +48,25 @@ jobs:
           pytest -q -m "not gpu" -rf --timeout=300 2>&1 | tee pytest.log
         shell: bash
 
+      # Emitted as workflow error commands rather than only into the job summary: annotations are
+      # readable through the public checks API, so a failure explains itself to anyone looking at the
+      # repository, without a token to download the raw log.
       - name: Report failures
         if: failure()
         run: |
           {
             echo "### pytest failed on python ${{ matrix.python-version }}"
             echo '```'
-            tail -n 120 pytest.log
+            tail -n 200 pytest.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+          grep -E "^(FAILED|ERROR)" pytest.log | head -n 20 | while IFS= read -r line; do
+            echo "::error title=pytest ${{ matrix.python-version }}::${line}"
+          done
+          tail -n 25 pytest.log | while IFS= read -r line; do
+            echo "::error title=tail ${{ matrix.python-version }}::${line}"
+          done
         shell: bash
 
   service:
