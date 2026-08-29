@@ -1,8 +1,3 @@
----
-name: release
-description: Cut a spawnkit release - bump the version in both places, write the changelog section, tag, publish over Trusted Publishing, and verify the result on PyPI. Refuses to start unless the hygiene gate and CI are green.
----
-
 # Release procedure
 
 Cutting a release is mechanical, and it is written down because the two failure modes are both

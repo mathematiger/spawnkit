@@ -1,8 +1,3 @@
----
-name: bench
-description: Run the spawnkit benchmarks, write their results as JSON under benchmarks/results/, and update README and docs numbers only from those files. Encodes the rule that no figure is ever estimated.
----
-
 # Benchmark procedure
 
 Every performance claim `spawnkit` makes is about someone else's wall clock, so every claim has to be
