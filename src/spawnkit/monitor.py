@@ -148,7 +148,13 @@ class WorkerMonitor:
         """
         log.info("Watching %d workers", len(self._specs))
         started_at = time.monotonic()
-        last_status = 0.0
+        # -inf, not 0.0, so the first pass always reports. time.monotonic() is time since boot on
+        # Linux, so `now - 0.0` is only "long ago" on a machine that has been up a while: on a
+        # freshly booted one - a CI runner, a cloud instance, a rebooted node - it is a number
+        # smaller than the interval, and the first status line and the first on_status_tick would be
+        # silently withheld for up to a minute. A heartbeat that depends on the host's uptime is not
+        # a heartbeat.
+        last_status = float("-inf")
 
         while not self._stop.is_set():
             self._raise_on_oom_death(self._specs)

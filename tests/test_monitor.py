@@ -494,6 +494,29 @@ def test_the_status_hook_fires_on_the_status_interval_not_every_pass(stop_event:
     assert len(ticks) == 1
 
 
+def test_the_first_status_fires_on_a_freshly_booted_machine(
+    stop_event: threading.Event, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first report must not depend on how long the host has been up.
+
+    ``time.monotonic()`` is time since boot on Linux. A "last reported at 0.0" baseline therefore
+    looks like the distant past on a machine that has been up for days, and like *five seconds ago*
+    on one that booted a moment ago - so the first status line and the first ``on_status_tick`` were
+    withheld for up to a full interval on exactly the machines that reboot often: CI runners, cloud
+    instances, freshly cycled nodes. It reproduced as a green suite everywhere and a red one on CI.
+    """
+    # A host that booted five seconds ago: every reading is a small number, which is exactly the
+    # condition under which a 0.0 baseline stops looking like the distant past.
+    monkeypatch.setattr("spawnkit.monitor.time.monotonic", lambda: 5.0)
+    ticks: list[int] = []
+    worker = DyingProcess(polls_before_death=12)
+
+    monitor = WorkerMonitor([WorkerSpec("worker", worker)], stop_event, check_interval=0.0)
+    monitor.watch(require_producers=False, on_status_tick=lambda: ticks.append(1))
+
+    assert len(ticks) == 1, "the first status was withheld because the host had just booted"
+
+
 def test_the_status_hook_follows_the_interval_it_is_given(
     monkeypatch: pytest.MonkeyPatch,
     stop_event: threading.Event,

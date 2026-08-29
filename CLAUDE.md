@@ -142,3 +142,22 @@ release is meant to be done by hand outside that procedure.
   helpers below.
 - Surgical diffs. Do not reformat, rename or "improve" code the change did not have to touch.
 - Do not delete a `TODO`. Resolve it or leave it.
+
+## Never install this package non-editable into the development venv
+
+`pip install ".[docs]"` — any form without `-e` — replaces the editable install with a **real copy
+in site-packages**, and from that moment the test suite runs against a snapshot instead of the
+working tree. It is silent: the suite still passes, it simply stops testing what you just changed.
+
+This actually happened here, and it cost real confidence: a docs-extra install replaced the editable
+one, and several subsequent green runs were against stale source while the live tree held unverified
+edits. CI caught a bug the local suite could not see, because CI installs with `-e` on a clean
+checkout every time.
+
+Install extras editable — `pip install -e ".[dev,docs]"` — and if you are ever unsure, check:
+
+```bash
+.venv/bin/python -c "import spawnkit; print(spawnkit.__file__)"   # must be under src/
+```
+
+A path under `site-packages/` means the suite is lying to you.
