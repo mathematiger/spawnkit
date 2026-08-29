@@ -183,8 +183,11 @@ def main() -> None:
     for batch, ratio in ratios.items():
         print(f"  {batch:<12} {ratio:>8.1f}x")
 
+    # Namespaced by device: the CPU and GPU runs measure genuinely different things - the cliff is a
+    # CPU thread-pool effect and vanishes when the forward runs on a device - so one filename between
+    # them means whichever ran last silently replaces the other's conclusions.
     path = write_results(
-        "threads.json",
+        f"threads_{'cuda' if args.device.startswith('cuda') else 'cpu'}.json",
         measurements,
         extra={
             "default_intra_op_threads": default_threads,

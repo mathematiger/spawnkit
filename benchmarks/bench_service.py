@@ -348,7 +348,10 @@ def main() -> None:
         # benchmarks/results/ would put phase overhead into a number the README cites.
         print("\n--profile set: results not written (instrumented latencies are not comparable)")
         return
-    path = write_results("service.json", measurements)
+    path = write_results(
+        f"service_{'cuda' if args.device.startswith('cuda') else 'cpu'}.json",
+        measurements,
+    )
     print(f"\nwrote {path}")
 
 

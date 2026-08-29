@@ -145,10 +145,16 @@ class ServiceClient:
 
 
 def as_torch(response: Response) -> dict[str, Any]:
-    """Convert a response's arrays to torch tensors, without copying.
+    """Convert a response's arrays to torch tensors, copying only where numpy forces it.
 
     A convenience for callers that want tensors back. ``torch.from_numpy`` shares memory with the
-    array, and the arrays in a response are already private to this caller, so this is free.
+    array, and a response's arrays are already private to this caller, so the common case costs
+    nothing.
+
+    It is not unconditionally free, and the exception is worth naming: ``torch.from_numpy`` rejects a
+    non-contiguous array, so one is copied first. That is not a corner case — a field sliced along a
+    non-zero axis is exactly what a recurrent state's ``[layers, batch, hidden]`` layout produces, so
+    those fields do copy, and the copy is what makes the conversion legal rather than an error.
 
     :param response: what :meth:`ServiceClient.call` returned.
     :return: the same fields as tensors.

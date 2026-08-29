@@ -1,7 +1,9 @@
 {
   "environment": {
-    "cpu_count": 40,
-    "cuda_available": false,
+    "cpu_count": 64,
+    "cuda": "12.8",
+    "cuda_available": true,
+    "gpu": "NVIDIA A100-SXM4-80GB",
     "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
     "processor": "x86_64",
     "python": "3.12.13",
@@ -16,12 +18,12 @@
         "workers": 4
       },
       "iterations": 3,
-      "mean_ms": 541.0676193333334,
-      "min_ms": 533.608412,
+      "mean_ms": 634.5007316666666,
+      "min_ms": 603.514758,
       "name": "shutdown/prompt/per_worker_timeout/workers=4",
-      "ops_per_s": 1.8481978301198874,
-      "p50_ms": 538.293715,
-      "p99_ms": 551.300731
+      "ops_per_s": 1.5760423118398348,
+      "p50_ms": 614.203033,
+      "p99_ms": 685.784404
     },
     {
       "context": {
@@ -31,12 +33,12 @@
         "workers": 4
       },
       "iterations": 3,
-      "mean_ms": 530.1093893333333,
-      "min_ms": 526.857935,
+      "mean_ms": 621.2234173333333,
+      "min_ms": 581.499635,
       "name": "shutdown/prompt/shared_window/workers=4",
-      "ops_per_s": 1.8864031087198854,
-      "p50_ms": 530.120959,
-      "p99_ms": 533.349274
+      "ops_per_s": 1.6097268262883666,
+      "p50_ms": 631.581898,
+      "p99_ms": 650.588719
     },
     {
       "context": {
@@ -46,12 +48,12 @@
         "workers": 8
       },
       "iterations": 3,
-      "mean_ms": 655.1170806666667,
-      "min_ms": 649.523009,
+      "mean_ms": 765.8185643333333,
+      "min_ms": 718.648212,
       "name": "shutdown/prompt/per_worker_timeout/workers=8",
-      "ops_per_s": 1.5264447066200293,
-      "p50_ms": 650.58746,
-      "p99_ms": 665.240773
+      "ops_per_s": 1.305792320235183,
+      "p50_ms": 739.723014,
+      "p99_ms": 839.084467
     },
     {
       "context": {
@@ -61,12 +63,12 @@
         "workers": 8
       },
       "iterations": 3,
-      "mean_ms": 652.3178833333333,
-      "min_ms": 617.656083,
+      "mean_ms": 747.515637,
+      "min_ms": 710.495164,
       "name": "shutdown/prompt/shared_window/workers=8",
-      "ops_per_s": 1.532994917891898,
-      "p50_ms": 649.278911,
-      "p99_ms": 690.018656
+      "ops_per_s": 1.3377646573565927,
+      "p50_ms": 727.697221,
+      "p99_ms": 804.354526
     },
     {
       "context": {
@@ -76,12 +78,12 @@
         "workers": 16
       },
       "iterations": 3,
-      "mean_ms": 914.5315686666667,
-      "min_ms": 897.726812,
+      "mean_ms": 961.7308806666666,
+      "min_ms": 820.031238,
       "name": "shutdown/prompt/per_worker_timeout/workers=16",
-      "ops_per_s": 1.093455966159748,
-      "p50_ms": 899.34283,
-      "p99_ms": 946.525064
+      "ops_per_s": 1.0397919211108262,
+      "p50_ms": 965.405271,
+      "p99_ms": 1099.756133
     },
     {
       "context": {
@@ -91,12 +93,42 @@
         "workers": 16
       },
       "iterations": 3,
-      "mean_ms": 821.1537086666667,
-      "min_ms": 730.131996,
+      "mean_ms": 988.2331876666667,
+      "min_ms": 954.000413,
       "name": "shutdown/prompt/shared_window/workers=16",
-      "ops_per_s": 1.217798798745891,
-      "p50_ms": 851.849858,
-      "p99_ms": 881.479272
+      "ops_per_s": 1.0119069188124679,
+      "p50_ms": 965.416181,
+      "p99_ms": 1045.282969
+    },
+    {
+      "context": {
+        "grace_timeout_s": 1.0,
+        "regime": "prompt",
+        "strategy": "per_worker_timeout",
+        "workers": 32
+      },
+      "iterations": 3,
+      "mean_ms": 1325.989579,
+      "min_ms": 1209.456645,
+      "name": "shutdown/prompt/per_worker_timeout/workers=32",
+      "ops_per_s": 0.7541537398462466,
+      "p50_ms": 1263.581142,
+      "p99_ms": 1504.93095
+    },
+    {
+      "context": {
+        "grace_timeout_s": 1.0,
+        "regime": "prompt",
+        "strategy": "shared_window",
+        "workers": 32
+      },
+      "iterations": 3,
+      "mean_ms": 1232.489003,
+      "min_ms": 1078.545183,
+      "name": "shutdown/prompt/shared_window/workers=32",
+      "ops_per_s": 0.8113662657970183,
+      "p50_ms": 1259.32851,
+      "p99_ms": 1359.593316
     },
     {
       "context": {
@@ -106,12 +138,12 @@
         "workers": 4
       },
       "iterations": 3,
-      "mean_ms": 4029.607351666667,
-      "min_ms": 4029.255807,
+      "mean_ms": 4029.6848996666668,
+      "min_ms": 4029.04085,
       "name": "shutdown/stuck/per_worker_timeout/workers=4",
-      "ops_per_s": 0.24816313668536333,
-      "p50_ms": 4029.718764,
-      "p99_ms": 4029.847484
+      "ops_per_s": 0.24815836098815552,
+      "p50_ms": 4029.346756,
+      "p99_ms": 4030.667093
     },
     {
       "context": {
@@ -121,12 +153,12 @@
         "workers": 4
       },
       "iterations": 3,
-      "mean_ms": 2317.035281,
-      "min_ms": 2315.569065,
+      "mean_ms": 2317.5542783333335,
+      "min_ms": 2315.969715,
       "name": "shutdown/stuck/shared_window/workers=4",
-      "ops_per_s": 0.43158600483994963,
-      "p50_ms": 2316.008833,
-      "p99_ms": 2319.527945
+      "ops_per_s": 0.43148935468262206,
+      "p50_ms": 2317.798001,
+      "p99_ms": 2318.895119
     },
     {
       "context": {
@@ -136,12 +168,12 @@
         "workers": 8
       },
       "iterations": 3,
-      "mean_ms": 8054.756643333334,
-      "min_ms": 8053.551467,
+      "mean_ms": 8064.245267666666,
+      "min_ms": 8060.166401,
       "name": "shutdown/stuck/per_worker_timeout/workers=8",
-      "ops_per_s": 0.12415024367342845,
-      "p50_ms": 8053.586526,
-      "p99_ms": 8057.131937
+      "ops_per_s": 0.12400416490424318,
+      "p50_ms": 8065.916519,
+      "p99_ms": 8066.652883
     },
     {
       "context": {
@@ -151,12 +183,12 @@
         "workers": 8
       },
       "iterations": 3,
-      "mean_ms": 2723.373361,
-      "min_ms": 2721.083696,
+      "mean_ms": 2728.865426,
+      "min_ms": 2725.706971,
       "name": "shutdown/stuck/shared_window/workers=8",
-      "ops_per_s": 0.36719166542512127,
-      "p50_ms": 2723.564786,
-      "p99_ms": 2725.471601
+      "ops_per_s": 0.36645266214751043,
+      "p50_ms": 2729.817174,
+      "p99_ms": 2731.072133
     },
     {
       "context": {
@@ -166,12 +198,12 @@
         "workers": 16
       },
       "iterations": 3,
-      "mean_ms": 16112.070989333333,
-      "min_ms": 16111.745685,
+      "mean_ms": 16124.407649666668,
+      "min_ms": 16120.456777,
       "name": "shutdown/stuck/per_worker_timeout/workers=16",
-      "ops_per_s": 0.062065267752483805,
-      "p50_ms": 16112.166672,
-      "p99_ms": 16112.300611
+      "ops_per_s": 0.062017782093264834,
+      "p50_ms": 16125.799342,
+      "p99_ms": 16126.96683
     },
     {
       "context": {
@@ -181,22 +213,54 @@
         "workers": 16
       },
       "iterations": 3,
-      "mean_ms": 3539.745681,
-      "min_ms": 3536.925257,
+      "mean_ms": 3548.3500263333335,
+      "min_ms": 3545.682598,
       "name": "shutdown/stuck/shared_window/workers=16",
-      "ops_per_s": 0.2825061713805083,
-      "p50_ms": 3540.29904,
-      "p99_ms": 3542.012746
+      "ops_per_s": 0.2818211260384997,
+      "p50_ms": 3546.301432,
+      "p99_ms": 3553.066049
+    },
+    {
+      "context": {
+        "grace_timeout_s": 1.0,
+        "regime": "stuck",
+        "strategy": "per_worker_timeout",
+        "workers": 32
+      },
+      "iterations": 3,
+      "mean_ms": 32254.663121,
+      "min_ms": 32250.323251,
+      "name": "shutdown/stuck/per_worker_timeout/workers=32",
+      "ops_per_s": 0.031003269085421985,
+      "p50_ms": 32253.987167,
+      "p99_ms": 32259.678945
+    },
+    {
+      "context": {
+        "grace_timeout_s": 1.0,
+        "regime": "stuck",
+        "strategy": "shared_window",
+        "workers": 32
+      },
+      "iterations": 3,
+      "mean_ms": 5197.224731333333,
+      "min_ms": 5189.6084,
+      "name": "shutdown/stuck/shared_window/workers=32",
+      "ops_per_s": 0.1924103827897111,
+      "p50_ms": 5198.698898,
+      "p99_ms": 5203.366896
     }
   ],
   "per_worker_over_shared_p50": {
     "prompt": {
-      "workers=16": 1.1,
+      "workers=16": 1.0,
+      "workers=32": 1.0,
       "workers=4": 1.0,
       "workers=8": 1.0
     },
     "stuck": {
-      "workers=16": 4.6,
+      "workers=16": 4.5,
+      "workers=32": 6.2,
       "workers=4": 1.7,
       "workers=8": 3.0
     }

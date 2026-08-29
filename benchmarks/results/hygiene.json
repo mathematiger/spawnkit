@@ -1,0 +1,47 @@
+{
+  "arms": {
+    "masked": {
+      "masked": true,
+      "per_worker_mib": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "saw_a_device": 0,
+      "total_mib": 0,
+      "workers": 6,
+      "workers_holding_vram": 0
+    },
+    "unmasked": {
+      "masked": false,
+      "per_worker_mib": [
+        414,
+        414,
+        414,
+        414,
+        414,
+        414
+      ],
+      "saw_a_device": 6,
+      "total_mib": 2484,
+      "workers": 6,
+      "workers_holding_vram": 6
+    }
+  },
+  "environment": {
+    "cpu_count": 64,
+    "cuda": "12.8",
+    "cuda_available": true,
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "processor": "x86_64",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128"
+  },
+  "measurements": [],
+  "per_worker_mib": 414.0,
+  "reclaimed_mib": 2484
+}

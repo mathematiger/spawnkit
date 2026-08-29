@@ -1,0 +1,94 @@
+{
+  "environment": {
+    "cpu_count": 64,
+    "cuda": "12.8",
+    "cuda_available": true,
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "processor": "x86_64",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128"
+  },
+  "measurements": [
+    {
+      "context": {
+        "aggregate_calls_per_s": 958.7,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 500,
+        "clients": 8,
+        "cuda_graph": false,
+        "device": "cuda:0",
+        "profiled": false,
+        "transport": "queue",
+        "wall_s": 4.172
+      },
+      "iterations": 4000,
+      "mean_ms": 2.1385498115,
+      "min_ms": 1.204899,
+      "name": "service/queue",
+      "ops_per_s": 467.6065970605521,
+      "p50_ms": 1.990123,
+      "p99_ms": 3.658347
+    },
+    {
+      "context": {
+        "aggregate_calls_per_s": 1014.2,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 500,
+        "clients": 8,
+        "cuda_graph": false,
+        "device": "cuda:0",
+        "profiled": false,
+        "transport": "shared_mem",
+        "wall_s": 3.944
+      },
+      "iterations": 4000,
+      "mean_ms": 1.836676904,
+      "min_ms": 1.196119,
+      "name": "service/shared_mem",
+      "ops_per_s": 544.4615750446656,
+      "p50_ms": 1.527786,
+      "p99_ms": 2.975563
+    },
+    {
+      "context": {
+        "aggregate_calls_per_s": 1142.3,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 500,
+        "clients": 8,
+        "cuda_graph": true,
+        "device": "cuda:0",
+        "profiled": false,
+        "transport": "queue",
+        "wall_s": 3.502
+      },
+      "iterations": 4000,
+      "mean_ms": 1.3473394532499998,
+      "min_ms": 0.471426,
+      "name": "service/queue+cudagraph",
+      "ops_per_s": 742.2034570336665,
+      "p50_ms": 1.305949,
+      "p99_ms": 2.351279
+    },
+    {
+      "context": {
+        "aggregate_calls_per_s": 1175.5,
+        "batch_window_ms": 0.0,
+        "calls_per_client": 500,
+        "clients": 8,
+        "cuda_graph": true,
+        "device": "cuda:0",
+        "profiled": false,
+        "transport": "shared_mem",
+        "wall_s": 3.403
+      },
+      "iterations": 4000,
+      "mean_ms": 0.99884265275,
+      "min_ms": 0.552285,
+      "name": "service/shared_mem+cudagraph",
+      "ops_per_s": 1001.1586882546652,
+      "p50_ms": 0.904421,
+      "p99_ms": 1.661385
+    }
+  ]
+}

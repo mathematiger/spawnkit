@@ -1,0 +1,323 @@
+{
+  "contenders": 8,
+  "default_intra_op_threads": 64,
+  "environment": {
+    "cpu_count": 64,
+    "cuda": "12.8",
+    "cuda_available": true,
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "platform": "Linux-4.18.0-553.124.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "processor": "x86_64",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128"
+  },
+  "measurements": [
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 1
+      },
+      "iterations": 200,
+      "mean_ms": 0.94896417,
+      "min_ms": 0.888922,
+      "name": "forward/threads=1/batch=1",
+      "ops_per_s": 1053.7805658141972,
+      "p50_ms": 0.932852,
+      "p99_ms": 1.16229
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 1
+      },
+      "iterations": 200,
+      "mean_ms": 0.984068645,
+      "min_ms": 0.870942,
+      "name": "forward/threads=1/batch=4",
+      "ops_per_s": 1016.1892720400617,
+      "p50_ms": 0.936232,
+      "p99_ms": 1.279059
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 1
+      },
+      "iterations": 200,
+      "mean_ms": 0.972536405,
+      "min_ms": 0.880862,
+      "name": "forward/threads=1/batch=16",
+      "ops_per_s": 1028.2391433974135,
+      "p50_ms": 0.959212,
+      "p99_ms": 1.12836
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 1
+      },
+      "iterations": 200,
+      "mean_ms": 1.008431675,
+      "min_ms": 0.914602,
+      "name": "forward/threads=1/batch=64",
+      "ops_per_s": 991.6388237210023,
+      "p50_ms": 0.969892,
+      "p99_ms": 1.17452
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 1
+      },
+      "iterations": 200,
+      "mean_ms": 0.988024365,
+      "min_ms": 0.915312,
+      "name": "forward/threads=1/batch=256",
+      "ops_per_s": 1012.1207891467333,
+      "p50_ms": 0.967312,
+      "p99_ms": 1.230669
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 2
+      },
+      "iterations": 200,
+      "mean_ms": 0.982063755,
+      "min_ms": 0.890212,
+      "name": "forward/threads=2/batch=1",
+      "ops_per_s": 1018.2638295209256,
+      "p50_ms": 0.941202,
+      "p99_ms": 1.221289
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 2
+      },
+      "iterations": 200,
+      "mean_ms": 0.94912566,
+      "min_ms": 0.886913,
+      "name": "forward/threads=2/batch=4",
+      "ops_per_s": 1053.6012691933754,
+      "p50_ms": 0.933812,
+      "p99_ms": 1.144109
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 2
+      },
+      "iterations": 200,
+      "mean_ms": 0.9423876649999999,
+      "min_ms": 0.891422,
+      "name": "forward/threads=2/batch=16",
+      "ops_per_s": 1061.134432399431,
+      "p50_ms": 0.925271,
+      "p99_ms": 1.10561
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 2
+      },
+      "iterations": 200,
+      "mean_ms": 1.00087154,
+      "min_ms": 0.924812,
+      "name": "forward/threads=2/batch=64",
+      "ops_per_s": 999.1292189205421,
+      "p50_ms": 0.950931,
+      "p99_ms": 1.18531
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 2
+      },
+      "iterations": 200,
+      "mean_ms": 0.95465537,
+      "min_ms": 0.907282,
+      "name": "forward/threads=2/batch=256",
+      "ops_per_s": 1047.4984286737947,
+      "p50_ms": 0.940602,
+      "p99_ms": 1.13634
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 8
+      },
+      "iterations": 200,
+      "mean_ms": 0.92430424,
+      "min_ms": 0.871692,
+      "name": "forward/threads=8/batch=1",
+      "ops_per_s": 1081.8948531492185,
+      "p50_ms": 0.912981,
+      "p99_ms": 1.09586
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 8
+      },
+      "iterations": 200,
+      "mean_ms": 0.9290000949999999,
+      "min_ms": 0.868382,
+      "name": "forward/threads=8/batch=4",
+      "ops_per_s": 1076.4261547249896,
+      "p50_ms": 0.914652,
+      "p99_ms": 1.10099
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 8
+      },
+      "iterations": 200,
+      "mean_ms": 0.946718975,
+      "min_ms": 0.890462,
+      "name": "forward/threads=8/batch=16",
+      "ops_per_s": 1056.2796631386839,
+      "p50_ms": 0.923691,
+      "p99_ms": 1.16521
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 8
+      },
+      "iterations": 200,
+      "mean_ms": 0.9606865550000001,
+      "min_ms": 0.908722,
+      "name": "forward/threads=8/batch=64",
+      "ops_per_s": 1040.9222392000686,
+      "p50_ms": 0.949042,
+      "p99_ms": 1.14696
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 8
+      },
+      "iterations": 200,
+      "mean_ms": 0.9619560850000001,
+      "min_ms": 0.914402,
+      "name": "forward/threads=8/batch=256",
+      "ops_per_s": 1039.5484945656328,
+      "p50_ms": 0.944442,
+      "p99_ms": 1.205279
+    },
+    {
+      "context": {
+        "batch": 1,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 64
+      },
+      "iterations": 200,
+      "mean_ms": 0.936569165,
+      "min_ms": 0.876452,
+      "name": "forward/threads=64/batch=1",
+      "ops_per_s": 1067.7268026435613,
+      "p50_ms": 0.916582,
+      "p99_ms": 1.10225
+    },
+    {
+      "context": {
+        "batch": 4,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 64
+      },
+      "iterations": 200,
+      "mean_ms": 0.930016435,
+      "min_ms": 0.883482,
+      "name": "forward/threads=64/batch=4",
+      "ops_per_s": 1075.249815343317,
+      "p50_ms": 0.918492,
+      "p99_ms": 1.1207
+    },
+    {
+      "context": {
+        "batch": 16,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 64
+      },
+      "iterations": 200,
+      "mean_ms": 0.95915281,
+      "min_ms": 0.874842,
+      "name": "forward/threads=64/batch=16",
+      "ops_per_s": 1042.5867386032055,
+      "p50_ms": 0.947241,
+      "p99_ms": 1.11739
+    },
+    {
+      "context": {
+        "batch": 64,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 64
+      },
+      "iterations": 200,
+      "mean_ms": 0.9589097200000001,
+      "min_ms": 0.905512,
+      "name": "forward/threads=64/batch=64",
+      "ops_per_s": 1042.851041284679,
+      "p50_ms": 0.943041,
+      "p99_ms": 1.177879
+    },
+    {
+      "context": {
+        "batch": 256,
+        "contenders": 8,
+        "device": "cuda:0",
+        "threads": 64
+      },
+      "iterations": 200,
+      "mean_ms": 0.9645156149999999,
+      "min_ms": 0.908002,
+      "name": "forward/threads=64/batch=256",
+      "ops_per_s": 1036.7898502089051,
+      "p50_ms": 0.958712,
+      "p99_ms": 1.115
+    }
+  ],
+  "worst_over_best_p50": {
+    "batch=1": 1.0,
+    "batch=16": 1.0,
+    "batch=256": 1.0,
+    "batch=4": 1.0,
+    "batch=64": 1.0
+  }
+}

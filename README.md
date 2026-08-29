@@ -49,29 +49,62 @@ death observable and name which worker it was.
 
 ## Measured
 
-Every number here is read from a file under [`benchmarks/results/`](benchmarks/results/), written by
-the scripts in [`benchmarks/`](benchmarks/). Nothing in this README is estimated. All figures below
-are from one 40-core node; run the benchmarks on yours, because two of the three effects depend on
-how loaded your machine is.
+Every number here is read from a committed file under [`benchmarks/results/`](benchmarks/results/),
+written by the scripts in [`benchmarks/`](benchmarks/). Nothing is estimated. Two machines appear
+below and each table says which, because a latency figure is a claim about a machine as much as about
+the code: a 40-core CPU node, and an A100-SXM4-80GB node with 64 cores.
 
-### Pin the service's intra-op threads — 610×
+### A CPU-only worker holds 414 MiB of VRAM — until you mask it
 
-`benchmarks/results/threads.json`. Reference forward (128-wide latent, 6 residual blocks), **with 8
-competing processes** on a 40-core node:
+`benchmarks/results/hygiene.json`, A100-80GB, 6 workers that touch the CUDA runtime once and do no
+GPU work at all. Read with the driver's own per-process accounting, not the torch allocator, because
+the allocator cannot see a CUDA context — which is precisely the term that scales with worker count.
+
+| | workers holding VRAM | total | per worker |
+| --- | --- | --- | --- |
+| spawned normally | **6 / 6** | 2484 MiB | **414 MiB** |
+| spawned inside `cuda_hidden_from_children()` | **0 / 6** | 0 MiB | 0 MiB |
+
+Masked, none of the six could even see a device. At 32 workers the unmasked figure is ~13 GB of a
+card doing nothing.
+
+### Pin the service's intra-op threads — 638× on a CPU service
+
+`benchmarks/results/threads_cpu.json`. Reference forward (128-wide latent, 6 residual blocks), **with
+8 competing processes** on a 40-core node:
 
 | intra-op threads | batch 1 | batch 4 | batch 16 | batch 256 |
 | --- | --- | --- | --- | --- |
-| 1 | 0.376 ms | 0.455 ms | 0.591 ms | 3.01 ms |
-| 40 (torch default) | 0.369 ms | **277.8 ms** | 275.7 ms | 308.5 ms |
-| ratio | 1.0× | **610.6×** | 482.8× | 146.4× |
+| 1 | 0.395 ms | 0.404 ms | 0.588 ms | 2.99 ms |
+| 40 (torch default) | 0.421 ms | **257.5 ms** | 287.2 ms | 289.9 ms |
+| ratio | 1.1× | **638×** | 488× | 140× |
 
-`BatchedInferenceService` defaults to `intra_op_threads=1` because of this. Two things hide it, and
-both are reasons a profiler will not find it for you:
+`BatchedInferenceService` defaults to `intra_op_threads=1` because of this. Three things scope it,
+and the first two are why a profiler will not find it for you:
 
 - **It needs contention.** The same grid on an *idle* node shows 1.4–1.7×. Profiling the service by
   itself says nothing is wrong.
-- **It needs batch > 1.** Batch 1 takes a serial fast path and is exactly 1.0×, so every
-  single-client smoke test measures the one case that looks fine.
+- **It needs batch > 1.** Batch 1 takes a serial fast path, so every single-client smoke test
+  measures the one case that looks fine.
+- **It is a CPU-service effect.** `benchmarks/results/threads_cuda.json`, same grid on the A100, is
+  **1.0× at every batch size** — when the forward runs on the device, the CPU thread pool does not
+  matter. If your service is on a GPU, this knob is not your problem.
+
+### Batched service round trip, and what CUDA graphs buy
+
+`benchmarks/results/service_cuda.json`. A100-80GB, 8 client processes, 500 timed calls each after a
+warm-up and a start barrier:
+
+| transport | p50 | p99 | aggregate |
+| --- | --- | --- | --- |
+| queue | 1.990 ms | 3.658 ms | 959 calls/s |
+| shared-memory rows | 1.528 ms | 2.976 ms | 1014 calls/s |
+| queue + CUDA graph | 1.306 ms | 2.351 ms | 1142 calls/s |
+| shared-memory + CUDA graph | **0.904 ms** | **1.661 ms** | **1176 calls/s** |
+
+Both optimisations pay and they compose: **2.2× end to end** on the round trip, from removing
+pickling on the hot path and replaying the forward from a captured graph rather than relaunching it.
+The graph's output is checked against an eager run on first use of every captured shape.
 
 ### Teardown that does not scale with the pool — 4.6× at 16 workers
 
@@ -81,95 +114,16 @@ grace window:
 | stuck workers | per-worker timeout | one shared window | ratio |
 | --- | --- | --- | --- |
 | 4 | 4.03 s | 2.32 s | 1.7× |
-| 8 | 8.05 s | 2.72 s | 3.0× |
-| 16 | 16.11 s | 3.54 s | 4.6× |
+| 8 | 8.07 s | 2.73 s | 3.0× |
+| 16 | 16.13 s | 3.55 s | 4.5× |
+| 32 | 32.25 s | 5.20 s | **6.2×** |
 
-The ratio grows with the pool, which is the whole point. For workers that *do* exit inside the
-window the two strategies are identical (1.0×), and the benchmark reports that arm too.
+The left column is linear in the pool size and the right one is not, which is the point — and both
+machines produced the same figures to within a few tens of milliseconds, as an O(N)-against-O(1)
+difference should.
 
-### Batched service round trip
-
-`benchmarks/results/service.json`. 4 client processes, CPU service, 200 timed calls each after a
-warm-up and a start barrier:
-
-| transport | p50 | p99 |
-| --- | --- | --- |
-| queue | 1.420 ms | 1.903 ms |
-| shared-memory rows | 1.321 ms | 1.570 ms |
-
-GPU numbers, including CUDA-graph replay, are not in this table yet — they need a GPU run, and this
-README does not carry a figure that has no result file behind it.
-
----
-
-## Install
-
-```bash
-pip install spawnkit           # hygiene + supervision: stdlib and numpy only
-pip install spawnkit[torch]    # adds the batched inference service
-```
-
-The core tiers deliberately do not depend on torch, so the hygiene layer installs in seconds and is
-usable from a process that must not import torch yet.
-
-## The three tiers
-
-They import downward only — hygiene knows nothing of supervision, supervision nothing of the service
-— so you can take just the first.
-
-### hygiene
-
-`cuda_hidden_from_children` and `blas_threads_pinned` run in the **parent**, around `Process.start()`;
-`prepare_cpu_only_worker` runs in the **child**, first thing. Getting that backwards fails silently.
-`spawnkit.seeding` derives each worker's RNG stream from one seed so a run reproduces across spawn.
-
-### supervision
-
-Describe each worker once and hand the list to the monitor:
-
-```python
-from spawnkit import WorkerMonitor, WorkerSpec
-
-monitor = WorkerMonitor([
-    WorkerSpec("learner", learner, critical=True),
-    WorkerSpec("actor-0", actor, producer=True, restart_fn=respawn, max_restarts=3),
-    WorkerSpec("evaluator", evaluator, critical=False),
-], stop_event)
-monitor.watch()          # raises OutOfMemoryAbortError; returns on every allowed end
-```
-
-Four policies, in a load-bearing order: OOM deaths are swept **first** (an OOM must not be reported
-as a restartable worker or a tolerated one), critical deaths stop the run, tolerated deaths are
-logged once, restarts are budgeted. `spawnkit.run` gives every run its own directory atomically, so
-two jobs sharing a tag cannot prune each other's checkpoints.
-
-### service
-
-One process owns the device model; N workers hold a client and call it.
-
-```python
-from spawnkit.service import BatchedInferenceService, ModuleReplica, ServiceClient, TensorRpc
-
-step = TensorRpc("step", method="forward", input_axes=(0, 0),
-                 output_fields=("hidden", "policy", "value"))
-
-replica = ModuleReplica(net)                       # net.share_memory() in the parent
-service = BatchedInferenceService(
-    build_fn=replica.build, sync_fn=replica.sync, rpcs=[step],
-    request_queue=req_q, response_queues=resp_qs, stop_event=stop,
-    device="cuda:0", graph_rpcs=("step",),
-)
-process = service.start()                          # spawn by default, never fork
-
-# in each worker:
-out = ServiceClient(rank, req_q, resp_qs[rank], [step], stop).call("step", (hidden, action))
-```
-
-VRAM is 1× the model regardless of worker count. Two transports (a queue, or shared-memory rows for
-a hot path where pickling is measurable), and optional CUDA-graph replay with a first-use check that
-verifies the graphed output against an eager run bit-for-bit and disables itself if they ever differ.
-
----
+For workers that *do* exit inside the grace window the two strategies are identical (1.0× at every
+pool size), and the benchmark reports that arm too rather than quietly keeping the flattering one.
 
 ## Examples
 
