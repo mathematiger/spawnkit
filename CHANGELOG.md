@@ -59,6 +59,34 @@ Responses travel as `dict[str, ndarray]`. The alternative — a positional tuple
 the client which variant produced it — works until two variants have the same arity and then fails by
 silently decoding one as the other.
 
+### Fixed before release — four defects an adversarial pass found
+
+Deliberate misuse, rather than use, found each of these. All four failed either silently or fatally.
+
+**A model that mixes rows was served, and served wrongly.** Batching N clients into one forward is
+only correct when no operation mixes rows, and nothing checked it. Three clients sending identical
+inputs to a model that subtracts the batch mean received -1, 0 and +1 — each depending on who it was
+batched with, with no exception and no warning. `verify_row_independence` (on by default) now serves
+the first multi-request batch of each RPC twice, batched and per request, and refuses the model if
+the answers differ. There is deliberately no automatic fallback: serving one request per forward
+would remove the service's reason to exist.
+
+**One unroutable request ended everybody's run, and reported success.** A request naming a client id
+with no response queue took the service down and exited **zero**, so the run finished "cleanly"
+having served nothing after that point — the silent clean finish this package exists to prevent,
+produced by the package itself. Unroutable requests (bad client id, unknown RPC name) are now logged
+and dropped while the service keeps serving everyone else, and a genuinely fatal batch failure now
+*raises* instead of setting the stop event and returning, so the process exits non-zero.
+
+**Payloads whose arrays disagreed on row count were concatenated anyway.** `rows_in` reads the row
+count off the first array, so a request with a 2-row and a 5-row array was split at the wrong
+boundary and its rows were handed to neighbouring clients. No exception, no shape error.
+`TensorRpc.collate` now rejects it.
+
+**The shared transport's one-row limit surfaced as a reshape error.** A multi-row request produced
+`shape '[3]' is invalid for input of size 12`, which describes the symptom and not the cause. It now
+names the limit and says to move that RPC to the queue transport.
+
 ### Fixed before release — three defects the benchmarks found
 
 **The service forked instead of spawning.** Subclassing `multiprocessing.Process` binds a class to the

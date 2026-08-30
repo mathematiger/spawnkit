@@ -194,10 +194,34 @@ class TensorRpc(Rpc):
                 f"but {len(self.input_axes)} axes were declared"
             )
             raise ValueError(msg)
+        for index, payload in enumerate(payloads):
+            self._check_rows_agree(payload, index)
         return tuple(
             np.concatenate(column, axis=axis)
             for column, axis in zip(columns, self.input_axes, strict=True)
         )
+
+    def _check_rows_agree(self, payload: Payload, index: int) -> None:
+        """Every array in one request must carry the same number of rows.
+
+        Silent otherwise, and wrong in the worst way. ``rows_in`` reads the row count off the
+        *first* array, so a request whose arrays disagree is split at the wrong boundaries and its
+        rows are handed to the neighbouring clients — the misattribution this module warns about,
+        arriving with no exception and no shape error, because concatenation along a batch axis
+        happily accepts mismatched lengths.
+        """
+        counts = {
+            int(np.asarray(array).shape[axis])
+            for array, axis in zip(payload, self.input_axes, strict=True)
+        }
+        if len(counts) > 1:
+            msg = (
+                f"rpc {self.name!r}: request {index} has arrays of differing row counts "
+                f"{sorted(counts)} along the declared axes {self.input_axes}. Every array in one "
+                "request must describe the same rows, or the response is split at the wrong "
+                "boundary and rows are returned to the wrong client."
+            )
+            raise ValueError(msg)
 
     def call(self, model: Any, batched: Sequence[Any], device: torch.device) -> Any:
         """Move the batched inputs to ``device`` and invoke the model method."""

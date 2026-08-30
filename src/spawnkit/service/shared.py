@@ -113,9 +113,21 @@ class SharedRows:
             reshaped to the row's shape, so a ``[1, H]`` batch-of-one and a ``[H]`` vector are both
             accepted — clients disagree about that and neither is wrong.
         :raises KeyError: if a declared request field is missing from ``payload``.
+        :raises ValueError: if a value does not hold exactly one row's worth of elements — most often
+            a multi-row request, which this transport structurally cannot carry.
         """
         for name, row in self.request.items():
-            row[client_id].copy_(payload[name].detach().reshape(row.shape[1:]))
+            value = payload[name].detach()
+            row_shape = row.shape[1:]
+            if value.numel() != row[client_id].numel():
+                msg = (
+                    f"shared-memory field {name!r} takes one row shaped {tuple(row_shape)}, but "
+                    f"{value.numel()} values were given. This transport allocates exactly one row "
+                    "per client, so a request carrying several rows cannot use it: drop this RPC's "
+                    "SharedRowSpec to move it onto the queue transport, which has no such limit."
+                )
+                raise ValueError(msg)
+            row[client_id].copy_(value.reshape(row_shape))
 
     def read_response(self, client_id: int) -> dict[str, torch.Tensor]:
         """Return a **cloned** copy of one client's response row, as ``{field: tensor}``.

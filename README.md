@@ -136,6 +136,77 @@ Both run end to end and are checked by hand on every change; neither is pseudoco
   Gymnasium environments through one batched ensemble-Q service, supervised by a `WorkerMonitor`.
   No tree search, no planning, no learning: it is the plumbing, in the order a launcher uses it.
 
+## Limitations
+
+Read this before adopting. Everything here is a real constraint, most of it found by deliberately
+attacking the package rather than by using it, and each one is a case where you can get a wrong
+answer or a stopped run if you are not aware of it.
+
+### Batching requires a row-independent model — this is the big one
+
+The service serves N clients' requests in **one forward**. That is only correct if no operation in
+your model mixes rows. Batch normalisation left in training mode, any normalisation over `dim=0`,
+attention or pooling across the batch: all of them make one client's answer depend on who it was
+batched with.
+
+Measured, before the guard existed: three clients sent *identical* inputs to a model that subtracts
+the batch mean and received `-1`, `0` and `+1`. No exception, no warning, three plausible-looking
+numbers, all wrong.
+
+`BatchedInferenceService` now verifies this once per RPC on its first multi-request batch
+(`verify_row_independence=True` by default) and refuses to serve a model that fails. The check costs
+one extra forward per request, once. **If you disable it, this becomes your responsibility.** There
+is no safe automatic fallback: serving one request per forward would make the service pointless.
+
+### One in-flight request per client
+
+`ServiceClient.call` is synchronous and each client owns one slot. Calling one client from two
+threads is detected — the ordering guard raises rather than returning mixed-up answers — but it is
+not *supported*. Use one client per worker process. There is no pipelining, no async API, and no
+request priority.
+
+### The shared-memory transport is strictly limited
+
+One row per client, shapes fixed at allocation. A request carrying several rows cannot use it, a
+call whose tensor width varies per request cannot use it, and value-prefix/recurrent-state layouts
+generally cannot either. All of those belong on the queue transport, which has none of those limits
+and is the default. The measured gain is real but modest (1.990 ms → 1.528 ms on the A100 above), so
+reach for it only when profiling says pickling is a meaningful share of your round trip.
+
+### CUDA graphs assume more than they can check
+
+Graph replay pads a short batch up to a captured bucket size, which is sound only for the same
+row-independence property above. The runner verifies its output against an eager run on first use of
+each captured shape and disables itself permanently on any mismatch — but that is a safety net over
+your reasoning, not a substitute for it. Weight updates must be **in place** (`load_state_dict`); a
+resync that rebinds parameters to new tensors silently invalidates every captured graph.
+
+### Single node, single process tree
+
+No multi-node, no cluster scheduler, no network transport, no fault-tolerant reconnection. A client
+whose service dies raises; it does not reconnect. If you need to cross machines, use Ray.
+
+### The scheduler is FIFO and has no fairness guarantee
+
+Requests are served in arrival order up to `max_batch`. A slow client is not protected from a fast
+one monopolising the queue, and there is no priority, no deadline and no backpressure beyond each
+client blocking on its own call.
+
+### What it does *not* validate
+
+- **`rows_in`** is trusted. An `Rpc` subclass that reports the wrong row count will misattribute
+  results between clients silently; `TensorRpc` computes it for you, which is the safer path.
+- **Payload dtypes and shapes** beyond the row-count agreement check are your model's problem.
+- **Client ids** must be unique and less than the number of response queues. A request naming an
+  unroutable id is logged and dropped — it will not take the service down, but that client will
+  block until its own timeout.
+
+### Platform
+
+Linux is what it is developed and measured on. It is stdlib-only in the first two tiers so it should
+work elsewhere, but `SIGHUP` handling, `/dev/shm` behaviour and the CUDA-context measurements are
+POSIX assumptions, and Windows is untested.
+
 ## When *not* to use this
 
 Being honest about this is more useful than a longer feature list.

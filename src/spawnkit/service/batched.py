@@ -209,6 +209,13 @@ class BatchedInferenceService:
 
         Raise it only if your forward is genuinely compute-bound and the service has cores of its
         own, and measure under real client load when you do. ``None`` leaves torch's setting alone.
+    :param verify_row_independence: check once per RPC, on its first batch holding more than one
+        request, that batching does not change any client's answer. **Batching is only correct for a
+        row-independent model** — one where no operation mixes rows — and a model that violates it is
+        not slow or noisy, it is *wrong*: measured, three clients sending identical inputs to a model
+        that subtracts the batch mean received -1, 0 and +1, each depending on who it was batched
+        with, with no error anywhere. Costs one extra forward per request, once, at startup. Turn it
+        off only if you have reasoned about your model and want the startup back.
     :param graph_rpcs: names of RPCs to accelerate with CUDA-graph replay. Only RPCs that implement
         :meth:`~spawnkit.service.rpc.Rpc.to_tensors` are eligible; others are ignored with a warning.
     :param max_graph_rows: widest batch to capture a graph for.
@@ -229,6 +236,7 @@ class BatchedInferenceService:
         batch_window_ms: float = 0.0,
         shared_rows: SharedRows | None = None,
         intra_op_threads: int | None = 1,
+        verify_row_independence: bool = True,
         graph_rpcs: Sequence[str] = (),
         max_graph_rows: int = 512,
         name: str = "BatchedInferenceService",
@@ -246,6 +254,8 @@ class BatchedInferenceService:
         self._batch_window_s = max(0.0, float(batch_window_ms)) / 1000.0
         self._rows = shared_rows
         self._intra_op_threads = intra_op_threads
+        self._verify_rows = verify_row_independence
+        self._verified_rpcs: set[str] = set()
         self._graph_rpcs = tuple(graph_rpcs)
         self._max_graph_rows = int(max_graph_rows)
         self._runners: dict[str, GraphRunner] = {}
@@ -371,18 +381,76 @@ class BatchedInferenceService:
         return batch
 
     def _handle_batch(self, model: Any, batch: list[Request], stats: BatchFillStats) -> None:
-        """Serve one collected batch, ending the run if it fails."""
+        """Serve one collected batch. Drop what cannot be routed; die on anything else.
+
+        The distinction matters and used to be missing. A request naming a client id or an RPC the
+        service does not have is *that request's* fault, and taking the whole service down for it
+        ends everyone else's run too — measured: a single out-of-range id stopped the service and
+        exited **zero**, so the run reported success having served nothing after that point. Those
+        are now logged and skipped.
+
+        Everything else — the model raising, an allocation failing — is the run's fatal condition,
+        and the process exits **non-zero** so a supervisor and a scheduler both record a failure.
+        Setting the stop event and returning, which is what this used to do, ends the process at
+        status 0 and is indistinguishable from a clean shutdown.
+        """
+        routable, dropped = self._partition_routable(batch)
+        if dropped:
+            log.error(
+                "[%s] dropped %d unroutable request(s); the service keeps serving the rest",
+                self._name,
+                dropped,
+            )
+        if not routable:
+            return
+
         try:
-            counts = self._process_batch(model, batch)
+            counts = self._process_batch(model, routable)
         except Exception as exc:
-            # Exit non-zero rather than merely setting the stop event: a batch that would not fit is
-            # the run's fatal condition, not a clean end to it.
             abort_worker_on_oom(exc, f"{self._name} batch")
             log.error("[%s] batch failed: %s; stopping the run", self._name, exc, exc_info=True)
             self._stop.set()
-            return
-        stats.record(counts, len(batch))
+            # Raised, not swallowed: it leaves the process non-zero, which is the whole difference
+            # between "this run failed" and "this run finished".
+            raise
+
+        stats.record(counts, len(routable))
         stats.maybe_log(self._max_batch)
+
+    def _partition_routable(self, batch: list[Request]) -> tuple[list[Request], int]:
+        """Split a batch into requests this service can answer, and count the ones it cannot.
+
+        Unroutable means the reply could not be delivered or the call has no implementation here: a
+        client id outside ``response_queues``, or an RPC name absent from the registry. Both are
+        caller errors that must not be fatal to the service.
+        """
+        routable: list[Request] = []
+        dropped = 0
+        for request in batch:
+            client_id, request_id, rpc_name, _payload = request
+            if not 0 <= client_id < len(self._resp_qs):
+                log.error(
+                    "[%s] request %d names client id %d, but this service has %d response queue(s);"
+                    " dropping it - the client will time out rather than be answered",
+                    self._name,
+                    request_id,
+                    client_id,
+                    len(self._resp_qs),
+                )
+                dropped += 1
+                continue
+            if rpc_name not in self._rpcs:
+                log.error(
+                    "[%s] client %d asked for unknown rpc %r; known: %s. Dropping it.",
+                    self._name,
+                    client_id,
+                    rpc_name,
+                    sorted(self._rpcs),
+                )
+                dropped += 1
+                continue
+            routable.append(request)
+        return routable, dropped
 
     @torch.inference_mode()
     def _process_batch(self, model: Any, batch: list[Request]) -> dict[str, int]:
@@ -414,8 +482,51 @@ class BatchedInferenceService:
         batched = rpc.collate(payloads)
         outputs = self._forward(rpc, model, batched)
         responses = rpc.split(outputs, [rpc.rows_in(payload) for payload in payloads])
+        self._verify_row_independence(model, rpc, payloads, responses)
         for (client_id, request_id, _name, _payload), response in zip(requests, responses, strict=True):
             self._resp_qs[client_id].put((request_id, response))
+
+    def _verify_row_independence(
+        self, model: Any, rpc: Rpc, payloads: list[Any], responses: list[Any],
+    ) -> None:
+        """Check once per RPC that a client's answer does not depend on who it was batched with.
+
+        Batching N requests into one forward is only correct when no operation mixes rows. That
+        precondition is easy to violate by accident — batch normalisation left in training mode, a
+        normalisation over ``dim=0``, any pooling across the batch — and the failure is silent:
+        every client gets a plausible answer, and every client's answer is wrong in a way that
+        changes with the batch it landed in.
+
+        So the first batch carrying more than one request is served twice: once batched, and once
+        per request. If the two disagree, batching is unsound for this model and the service stops
+        rather than serving corrupt results, because there is no safe fallback that keeps the
+        service's reason to exist — running one forward per request is what it was built to avoid.
+
+        Runs once per RPC and then never again, so the cost is a startup cost, not a per-call one.
+        """
+        if not self._verify_rows or rpc.name in self._verified_rpcs or len(payloads) < 2:
+            return
+        self._verified_rpcs.add(rpc.name)
+
+        for index, (payload, batched_response) in enumerate(zip(payloads, responses, strict=True)):
+            alone = rpc.split(
+                self._forward(rpc, model, rpc.collate([payload])), [rpc.rows_in(payload)],
+            )[0]
+            for field, alone_value in alone.items():
+                batched_value = batched_response.get(field)
+                if batched_value is None or not _close_enough(alone_value, batched_value):
+                    msg = (
+                        f"rpc {rpc.name!r} is not row-independent: request {index}'s {field!r} "
+                        "changed when it was batched with other requests. Batching N requests into "
+                        "one forward is only correct when no operation mixes rows - batch "
+                        "normalisation in training mode, a normalisation over dim=0, or any pooling "
+                        "across the batch will do this. Every client would receive a plausible "
+                        "answer that silently depends on who it was batched with. Fix the model, or "
+                        "if you are certain this is acceptable, pass "
+                        "verify_row_independence=False."
+                    )
+                    raise RuntimeError(msg)
+        log.info("[%s] rpc %r verified row-independent", self._name, rpc.name)
 
     def _serve_shared(self, model: Any, rpc: Rpc, requests: list[Request]) -> None:
         """Gather the batch's rows from shared memory, forward, scatter back, signal each client."""
@@ -450,6 +561,19 @@ class BatchedInferenceService:
         # Pass the tensors rather than the original batch: the device move already happened, and
         # as_tensor/.to on an on-device tensor is a no-op, so this costs nothing and avoids a repeat.
         return rpc.call(model, tensors, self._device)
+
+
+def _close_enough(left: Any, right: Any) -> bool:
+    """Whether two response arrays agree to floating-point tolerance.
+
+    Tolerance rather than exact equality: batching changes the shape of the underlying GEMM, so bit
+    equality is not a property the service promises even for a perfectly row-independent model. The
+    violations this guards against are not subtle rounding differences - they are whole values
+    moving - so a loose tolerance still catches them and a tight one would only produce false alarms.
+    """
+    import numpy as np
+
+    return bool(np.allclose(np.asarray(left), np.asarray(right), rtol=1e-4, atol=1e-5))
 
 
 class _ModelCall:
