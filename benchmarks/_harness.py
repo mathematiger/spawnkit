@@ -19,6 +19,7 @@ that make a microbenchmark lie:
 from __future__ import annotations
 
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -31,6 +32,16 @@ from typing import Any
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 """Where every published number lives. Committed on purpose."""
+
+RESULTS_DIR_ENV = "SPAWNKIT_BENCH_RESULTS_DIR"
+"""Env var redirecting results elsewhere, so a run can measure without touching the committed files.
+
+Needed for the one comparison that actually answers "did this change cost anything": both arms in a
+single allocation, old code in a ``git worktree`` beside new. Without a redirect the second arm
+overwrites the first arm's file — and, worse, leaves a number measured on a busy node sitting in the
+working tree looking exactly like a published result. An env var rather than a flag because it is
+set once per arm and applies to whichever benchmarks that arm runs.
+"""
 
 _NS_PER_MS = 1_000_000.0
 
@@ -156,10 +167,12 @@ def write_results(filename: str, measurements: Iterable[Measurement], extra: dic
     :param filename: the result file's name, e.g. ``ipc.json``.
     :param measurements: what to record.
     :param extra: any additional top-level keys, e.g. a derived speed-up ratio.
-    :return: the path written.
+    :return: the path written. ``$SPAWNKIT_BENCH_RESULTS_DIR`` redirects it away from the committed
+        files; see :data:`RESULTS_DIR_ENV`.
     """
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    path = RESULTS_DIR / filename
+    directory = Path(os.environ.get(RESULTS_DIR_ENV) or RESULTS_DIR)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / filename
     payload: dict[str, Any] = {
         "environment": environment(),
         "measurements": [asdict(measurement) for measurement in measurements],

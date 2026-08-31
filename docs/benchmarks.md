@@ -46,7 +46,18 @@ changed, not the code. A results file records the machine it was written on, and
 different machine.
 
 So a before/after question needs both arms in **one allocation**, interleaved A/B/A/B, with the old
-code in a `git worktree` rather than reconstructed by hand. Interleaving is what makes the answer
+code in a `git worktree` rather than reconstructed by hand. Point each arm somewhere private, or the
+second overwrites the first and leaves a busy-node number sitting in the working tree looking like a
+published one:
+
+```bash
+git worktree add /tmp/old <commit-that-wrote-the-results-file>
+for arm in /tmp/old "$PWD"; do
+  SPAWNKIT_BENCH_RESULTS_DIR=/tmp/ab/$(basename "$arm") \
+    PYTHONPATH="$arm/src:$arm" python "$arm/benchmarks/bench_service.py" --clients 8
+done
+```
+ Interleaving is what makes the answer
 falsifiable: if the two repeats of an arm disagree by as much as the arms disagree with each other,
 there is no effect to report. That is what happened here — 2.273 and 2.389 ms for the old code
 against 2.307 and 2.437 for the new — and the honest conclusion was "no measurable difference"
