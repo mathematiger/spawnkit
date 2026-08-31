@@ -289,3 +289,28 @@ def test_an_empty_manifest_is_still_written(tmp_path: Path) -> None:
     write_run_manifest(manifest, {})
 
     assert json.loads(manifest.read_text()) == {}
+
+
+@pytest.mark.parametrize(
+    "tag",
+    ["../escaped", "../../escaped", "nested/name", "/absolute/path", "", ".", ".."],
+)
+def test_a_tag_that_would_escape_the_base_directory_is_refused(tmp_path: Path, tag: str) -> None:
+    """A run tag is joined onto a path, so a separator in it relocates the whole run.
+
+    Tags come from config files, CLI arguments and scheduler variables. Measured before this check:
+    ``claim_run_dir(base, "../../escaped")`` created a directory two levels *above* the base and an
+    absolute tag ignored the base entirely — silently, after which the run's output went there. An
+    empty tag is refused for the neighbouring reason: it resolves to the base itself, so the next
+    run lands *beside* the base rather than inside it.
+    """
+    with pytest.raises(ValueError, match="run tag"):
+        claim_run_dir(tmp_path, tag)
+
+
+def test_an_ordinary_tag_is_still_accepted(tmp_path: Path) -> None:
+    """The guard must not reject the names people actually use."""
+    for tag in ("run_1", "job_1234567", "sweep-2026-08-29", "a.b.c", "run_20260829_120000_4242"):
+        directory, resolved = claim_run_dir(tmp_path, tag)
+        assert resolved == tag
+        assert directory.parent == tmp_path

@@ -192,6 +192,20 @@ Requests are served in arrival order up to `max_batch`. A slow client is not pro
 one monopolising the queue, and there is no priority, no deadline and no backpressure beyond each
 client blocking on its own call.
 
+### Run tags must be a single directory name
+
+`claim_run_dir` refuses a tag containing a path separator, an absolute tag, and an empty one. Tags
+usually come from config files, CLI arguments or scheduler variables, and they are joined onto a
+path — before this was checked, `"../../escaped"` created the run two levels above the base and an
+absolute tag ignored the base entirely, both silently.
+
+### A `restart_fn` must return the new handle
+
+Returning `None` is treated as a *failed* restart: the dead handle is kept so the worker stays
+visible, and the run ends with a diagnosis. It used to be stored as-is, which made the worker
+invisible — no death to report, nothing to restart, and the monitor spun until the scheduler killed
+the job.
+
 ### What it does *not* validate
 
 - **`rows_in`** is trusted. An `Rpc` subclass that reports the wrong row count will misattribute

@@ -590,3 +590,32 @@ def test_an_absent_worker_beside_a_live_one_changes_nothing(watch_driver: Monito
 def _raise_out_of_memory() -> None:
     """A thread body that dies the way an exhausted node kills one."""
     raise MemoryError("cannot allocate memory")
+
+
+def test_a_restart_that_returns_no_handle_does_not_make_the_worker_invisible(
+    stop_event: threading.Event,
+) -> None:
+    """A restart_fn that forgets to return must not leave the monitor spinning forever.
+
+    ``None`` means "never started", which is never a fault — so storing a ``None`` returned by a
+    restart made the worker invisible: no death to report, nothing to restart, no reason to stop.
+    Measured before the fix, ``watch()`` never returned. That is the run-holds-its-allocation-doing-
+    nothing failure this module exists to catch, produced by the module itself.
+    """
+    calls: list[int] = []
+
+    def forgets_to_return() -> None:
+        calls.append(1)
+
+    spec = WorkerSpec(
+        "worker",
+        FakeProcess(alive=False),
+        critical=True,
+        restart_fn=forgets_to_return,  # type: ignore[arg-type]  # the violation under test
+        max_restarts=1,
+    )
+
+    WorkerMonitor([spec], stop_event, check_interval=0.0).watch(require_producers=False)
+
+    assert calls == [1], "the restart should have been attempted exactly once"
+    assert stop_event.is_set(), "the failed restart must end the run rather than spin"

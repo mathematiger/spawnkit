@@ -58,8 +58,10 @@ def claim_run_dir(base_dir: Path | str, tag: str) -> tuple[Path, str]:
     or the workers will use the tag you asked for and the parent will use the one it got.
 
     :param base_dir: the directory runs live under; created if missing.
-    :param tag: the preferred name, e.g. from :func:`default_run_tag`.
+    :param tag: the preferred name, e.g. from :func:`default_run_tag`. Must be a single directory
+        name — see :func:`_check_tag_is_a_single_name` for why anything else is refused.
     :return: ``(directory, resolved_tag)``.
+    :raises ValueError: if ``tag`` is empty, absolute, or contains a path separator.
 
     Examples
     --------
@@ -72,6 +74,7 @@ def claim_run_dir(base_dir: Path | str, tag: str) -> tuple[Path, str]:
     >>> first, second
     ('sweep', 'sweep_2')
     """
+    _check_tag_is_a_single_name(tag)
     base = Path(base_dir)
     suffix = 1
     while True:
@@ -132,3 +135,29 @@ def _stringify_paths(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_stringify_paths(item) for item in value]
     return value
+
+
+def _check_tag_is_a_single_name(tag: str) -> None:
+    """Refuse a tag that would place the run somewhere other than inside ``base_dir``.
+
+    A tag is usually a config value, a CLI argument or a scheduler variable, and it is joined onto a
+    path — so a tag containing ``..`` or a leading ``/`` silently relocates the entire run. Measured
+    before this check: ``claim_run_dir(base, "../../escaped")`` created a directory two levels
+    *above* the base, and an absolute tag ignored the base completely and wrote to the path it
+    named. Neither raised, and the run's output then went there.
+
+    An empty tag is refused for a related reason: it resolves to ``base_dir`` itself, so the first
+    run claims the base directory and the next becomes ``base_2`` *beside* it rather than within it.
+
+    :param tag: the caller's preferred run name.
+    :raises ValueError: if the tag is not a single, ordinary directory name.
+    """
+    if not tag or tag in {".", ".."}:
+        msg = f"run tag {tag!r} is empty or a directory reference; it must name a directory"
+        raise ValueError(msg)
+    if os.sep in tag or (os.altsep and os.altsep in tag) or Path(tag).is_absolute():
+        msg = (
+            f"run tag {tag!r} contains a path separator, so it would place the run outside "
+            "base_dir rather than inside it. A tag must be a single directory name."
+        )
+        raise ValueError(msg)

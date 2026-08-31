@@ -87,6 +87,29 @@ boundary and its rows were handed to neighbouring clients. No exception, no shap
 `shape '[3]' is invalid for input of size 12`, which describes the symptom and not the cause. It now
 names the limit and says to move that RPC to the queue transport.
 
+### Fixed before release — two more from a second adversarial pass
+
+The first pass attacked the service; this one attacked the hygiene and supervision tiers.
+
+**A run tag could place the run anywhere on the filesystem.** `claim_run_dir(base, "../../escaped")`
+created a directory two levels above the base, and an absolute tag ignored the base entirely and
+wrote to the path it named. Neither raised, and the run's output then went there. Tags come from
+config files, CLI arguments and scheduler variables, so this is ordinary input rather than an
+attack. A tag must now be a single directory name; empty, `.` and `..` are refused too, the last
+because an empty tag resolves to the base itself and puts the next run *beside* it.
+
+**A `restart_fn` returning `None` made the worker invisible and the monitor spun forever.** A `None`
+handle means "never started", which is never a fault — so a restart that forgot to return left the
+supervisor with no death to report, nothing to restart and no reason to stop. Measured: `watch()`
+never returned. That is precisely the run-holds-its-allocation-doing-nothing failure this package
+exists to catch, produced by the package itself. A restart yielding no handle is now logged as a
+failed restart and the dead handle is kept, so the worker stays visible and the run ends with a
+diagnosis.
+
+Two things held up under the same pass and are worth recording: nested `cuda_hidden_from_children`
+and `blas_threads_pinned` restore the environment correctly, and `write_run_manifest` leaves no
+partial file behind when a value will not serialise.
+
 ### Fixed before release — three defects the benchmarks found
 
 **The service forked instead of spawning.** Subclassing `multiprocessing.Process` binds a class to the

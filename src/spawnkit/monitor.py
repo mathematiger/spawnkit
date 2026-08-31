@@ -246,8 +246,24 @@ class WorkerMonitor:
             log.warning(
                 "%s died - restarting (%d of %d)", spec.name, spec.restarts_used + 1, spec.max_restarts,
             )
-            spec.handle = spec.restart_fn()
+            # Annotated optional even though restart_fn is declared to return a handle: the
+            # annotation is a contract, not an enforcement, and this guard exists for the caller
+            # who breaks it.
+            replacement: BaseProcess | None = spec.restart_fn()
             spec.restarts_used += 1
+            if replacement is None:
+                # The dead handle is kept on purpose. A None handle means "never started", which is
+                # never a fault, so storing one here would make the worker invisible: the monitor
+                # would find no death, nothing to restart and no reason to stop, and would spin
+                # until the scheduler killed the job. That is the exact failure this module exists
+                # to catch, and a restart_fn that forgets to return produces it.
+                log.error(
+                    "%s: restart_fn returned no process handle; treating the restart as failed and "
+                    "keeping the dead worker visible",
+                    spec.name,
+                )
+                continue
+            spec.handle = replacement
 
     def _producers_are_done(self) -> bool:
         """Whether producers were declared, at least one was started, and none is still alive.
