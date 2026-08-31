@@ -537,8 +537,59 @@ class BatchedInferenceService:
         tensors = self._rows.gather_request(client_ids, self._device)
         outputs = self._forward(rpc, model, tensors)
         self._rows.scatter_response(client_ids, outputs)
+        # Before the clients are signalled: once they are, the answer is theirs, and a check that
+        # fires afterwards would be reporting corruption already delivered.
+        self._verify_shared_row_independence(model, rpc, client_ids)
         for client_id, request_id, _name, _payload in requests:
             self._resp_qs[client_id].put((request_id, None))  # signal only; the data is in the row
+
+    def _verify_shared_row_independence(
+        self, model: Any, rpc: Rpc, client_ids: torch.Tensor,
+    ) -> None:
+        """Check the same precondition on the shared transport, which cannot reuse the queue path.
+
+        It needs its own implementation because this path never builds per-request payloads: the
+        inputs live in shared rows and the outputs are scattered straight back into them, so there
+        is nothing for the queue version's ``collate``/``split`` comparison to work with.
+
+        This gap was real and shipped: the queue path was guarded and this one was not, so exactly
+        the same row-dependent model that the service refused on the queue transport was served, and
+        served wrongly, over shared memory. Two paths, one precondition — both have to check it.
+
+        Runs after the scatter and before the clients are signalled, so the comparison reads the
+        batched answer as the client would, and a failure stops the run before the answer is handed
+        over.
+        """
+        if not self._verify_rows or rpc.name in self._verified_rpcs or int(client_ids.shape[0]) < 2:
+            return
+        if self._rows is None:  # pragma: no cover - the caller has already guaranteed this
+            return
+        self._verified_rpcs.add(rpc.name)
+
+        for position in range(int(client_ids.shape[0])):
+            one = client_ids[position : position + 1]
+            alone = self._forward(rpc, model, self._rows.gather_request(one, self._device))
+            for field in self._rows.response:
+                alone_value = getattr(alone, field, None)
+                if alone_value is None:
+                    continue
+                batched_value = self._rows.response[field][int(one.item())]
+                if not _close_enough(
+                    alone_value.detach().cpu().reshape(batched_value.shape),
+                    batched_value,
+                ):
+                    msg = (
+                        f"rpc {rpc.name!r} is not row-independent: client {int(one.item())}'s "
+                        f"{field!r} changed when it was batched with other requests. Batching N "
+                        "requests into one forward is only correct when no operation mixes rows - "
+                        "batch normalisation in training mode, a normalisation over dim=0, or any "
+                        "pooling across the batch will do this. Every client would receive a "
+                        "plausible answer that silently depends on who it was batched with. Fix "
+                        "the model, or if you are certain this is acceptable, pass "
+                        "verify_row_independence=False."
+                    )
+                    raise RuntimeError(msg)
+        log.info("[%s] rpc %r verified row-independent (shared transport)", self._name, rpc.name)
 
     def _forward(self, rpc: Rpc, model: Any, batched: Any) -> Any:
         """Run the RPC, replaying from a CUDA graph when one covers this batch.

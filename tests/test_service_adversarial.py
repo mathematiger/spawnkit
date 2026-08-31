@@ -149,6 +149,64 @@ def test_verification_can_be_switched_off() -> None:
     service._process_batch(model, requests)
 
 
+def test_the_shared_transport_checks_row_independence_too() -> None:
+    """Both transports carry the same precondition, so both must check it.
+
+    This gap was real and shipped: the queue path was guarded and the shared-memory path was not, so
+    exactly the same row-dependent model the service refused over the queue was accepted — and
+    served wrongly — over shared memory. Three clients sending 1, 2 and 3 got -1, 0 and +1 back.
+
+    The shared path needs its own check rather than reusing the queue's: it never builds per-request
+    payloads, because the inputs live in rows and the outputs are scattered straight back into them.
+    """
+    spec = SharedRowSpec(
+        request={"x": ((3,), torch.float32)}, response={"value": ((3,), torch.float32)},
+    )
+    rows = SharedRows(2, spec)
+    rows.write_request(0, {"x": torch.full((3,), 1.0)})
+    rows.write_request(1, {"x": torch.full((3,), 5.0)})
+
+    model = BatchMeanSubtractor()
+    service = BatchedInferenceService(
+        build_fn=lambda _device: model,
+        rpcs=[_rpc(shared=spec)],
+        request_queue=RecordingQueue(),
+        response_queues=[RecordingQueue(), RecordingQueue()],
+        stop_event=mp.get_context("spawn").Event(),
+        device="cpu",
+        shared_rows=rows,
+    )
+
+    with pytest.raises(RuntimeError, match="not row-independent"):
+        service._process_batch(model, [(0, 1, "infer", None), (1, 1, "infer", None)])
+
+
+def test_the_shared_transport_serves_a_row_independent_model() -> None:
+    """The shared-path guard must not fire on a correct model, and must answer each client its own."""
+    spec = SharedRowSpec(
+        request={"x": ((3,), torch.float32)}, response={"value": ((3,), torch.float32)},
+    )
+    rows = SharedRows(2, spec)
+    rows.write_request(0, {"x": torch.full((3,), 1.0)})
+    rows.write_request(1, {"x": torch.full((3,), 5.0)})
+
+    model = Doubler()
+    service = BatchedInferenceService(
+        build_fn=lambda _device: model,
+        rpcs=[_rpc(shared=spec)],
+        request_queue=RecordingQueue(),
+        response_queues=[RecordingQueue(), RecordingQueue()],
+        stop_event=mp.get_context("spawn").Event(),
+        device="cpu",
+        shared_rows=rows,
+    )
+
+    service._process_batch(model, [(0, 1, "infer", None), (1, 1, "infer", None)])
+
+    assert rows.read_response(0)["value"].reshape(-1).tolist() == [2.0, 2.0, 2.0]
+    assert rows.read_response(1)["value"].reshape(-1).tolist() == [10.0, 10.0, 10.0]
+
+
 # ---------------------------------------------------------------------------
 # One client's mistake must not end everybody's run
 # ---------------------------------------------------------------------------

@@ -153,8 +153,9 @@ Measured, before the guard existed: three clients sent *identical* inputs to a m
 the batch mean and received `-1`, `0` and `+1`. No exception, no warning, three plausible-looking
 numbers, all wrong.
 
-`BatchedInferenceService` now verifies this once per RPC on its first multi-request batch
-(`verify_row_independence=True` by default) and refuses to serve a model that fails. The check costs
+`BatchedInferenceService` verifies this once per RPC on its first multi-request batch
+(`verify_row_independence=True` by default), on **both** transports, and refuses to serve a model
+that fails. The check costs
 one extra forward per request, once. **If you disable it, this becomes your responsibility.** There
 is no safe automatic fallback: serving one request per forward would make the service pointless.
 

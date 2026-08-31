@@ -87,6 +87,19 @@ boundary and its rows were handed to neighbouring clients. No exception, no shap
 `shape '[3]' is invalid for input of size 12`, which describes the symptom and not the cause. It now
 names the limit and says to move that RPC to the queue transport.
 
+### Fixed before release — the row-independence guard did not cover both transports
+
+Found by re-attacking the fix rather than trusting it. The check added above was wired into the
+queue path only, so exactly the same row-dependent model the service now refuses over the queue was
+accepted — and served wrongly — over shared memory: three clients sending 1, 2 and 3 received -1, 0
+and +1. A guard on one of two paths is not a guard.
+
+The shared path needs its own implementation rather than reusing the queue's, because it never
+builds per-request payloads: inputs live in rows and outputs are scattered straight back into them,
+so there is nothing for a ``collate``/``split`` comparison to work with. It re-gathers each row
+alone, compares against what the batched pass wrote, and runs *before* the clients are signalled —
+a check that fires afterwards is reporting corruption already delivered.
+
 ### Fixed before release — two more from a second adversarial pass
 
 The first pass attacked the service; this one attacked the hygiene and supervision tiers.
