@@ -106,6 +106,11 @@ Both optimisations pay and they compose: **2.2× end to end** on the round trip,
 pickling on the hot path and replaying the forward from a captured graph rather than relaunching it.
 The graph's output is checked against an eager run on first use of every captured shape.
 
+Measured on an otherwise-quiet node. Re-running the same commit while four unrelated jobs share the
+machine costs ~15 % per call and about 2.3× of the aggregate throughput, and the 2.2× composed gain
+becomes 1.96× — so treat the ratio as the portable claim and the milliseconds as a fact about this
+machine. [`docs/benchmarks.md`](docs/benchmarks.md) says how that was separated from a code change.
+
 ### Teardown that does not scale with the pool — 4.6× at 16 workers
 
 `benchmarks/results/shutdown.json`. Workers that ignore `SIGTERM` and do not exit on their own, 1 s
