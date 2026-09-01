@@ -37,7 +37,9 @@ jobs:
         run: ruff check .
 
       - name: Mypy
-        run: mypy src tests scripts
+        # No paths: the set to check lives in pyproject's `files`, so this cannot drift from what a
+        # bare `mypy` checks locally. It had — `benchmarks` was checked by one and not the other.
+        run: mypy
 
       - name: Pytest
         # The runner is CPU-only; the service tier's GPU tests carry the `gpu` marker.

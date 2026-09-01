@@ -31,7 +31,20 @@ from typing import Any
 
 import torch
 
-from spawnkit.service import BatchedInferenceService, ServiceClient
+from spawnkit.service import BatchedInferenceService, ServiceClient, SharedRows
+
+
+def _require_rows(rows: SharedRows | None, rpc_name: str, side: str) -> SharedRows:
+    """Return the shared-memory buffers, or say which side was built without them.
+
+    The profiled subclasses below *override* the shared-transport methods, which means they also
+    replace the base classes' own guards — so without this the None case reaches an attribute
+    lookup instead of the clear error the library raises everywhere else.
+    """
+    if rows is None:
+        msg = f"rpc {rpc_name!r} declares the shared-memory transport but this {side} has no shared_rows"
+        raise RuntimeError(msg)
+    return rows
 
 ROUNDTRIP = "roundtrip"
 """Lifecycle channel carrying one request's checkpoints across the client and service processes."""
@@ -65,8 +78,19 @@ def build_profiler(run_dir: str, run_id: str, role: str) -> Any:
     :param role: what this process does, as the report groups by it.
     :return: the constructed ``Profiler``.
     """
-    from lineprofiler.accounting import Profiler
+    try:
+        from lineprofiler.accounting import Profiler
+    except ModuleNotFoundError as exc:  # pragma: no cover - depends on an unpublished package
+        msg = (
+            "--profile needs the `lineprofiler` accounting profiler, which is not on PyPI and is "
+            "not a declared dependency. Every published number comes from a run without it; the "
+            "flag exists to split a round trip into its segments during development. Drop --profile "
+            "to run the benchmark."
+        )
+        raise RuntimeError(msg) from exc
 
+    # Phases are opened with sync=False throughout: only the service holds a device, and the timed
+    # regions are deliberately submission-side. A phase that needs a device sync asks for it itself.
     return Profiler(
         run_dir=run_dir,
         run_id=run_id,
@@ -74,10 +98,6 @@ def build_profiler(run_dir: str, run_id: str, role: str) -> Any:
         enabled=True,
         trace=True,
         install=True,
-        # Every process here is CPU-only in the configuration that is measured on a login node, and
-        # on a GPU box only the service holds a device. Nothing opens a phase with sync=True, so this
-        # is belt and braces rather than load-bearing.
-        cuda_sync=False,
         # 1 Hz rather than the 30 s default. The trace's link ring holds capacity/20 = 10,000
         # checkpoints and drops the oldest silently once full; the service stamps three per request,
         # so a flush interval long enough to accumulate more than that would lose lifecycles and
@@ -125,8 +145,9 @@ class ProfiledServiceClient(ServiceClient):
     def _call_shared(self, rpc: Any, payload: Any) -> Any:
         """Submit through shared memory, timing the row write and the row read separately."""
         prof = self._prof
+        rows = _require_rows(self._rows, rpc.name, "client")
         with prof.phase("write_row"):
-            self._rows.write_request(self.client_id, payload)
+            rows.write_request(self.client_id, payload)
         self._counter += 1
         key = request_key(self.client_id, self._counter)
         with prof.phase("submit"):
@@ -137,7 +158,7 @@ class ProfiledServiceClient(ServiceClient):
         prof.trace_end(ROUNDTRIP, key)
         prof.wait_on(RESPONSE, key)
         with prof.phase("read_row"):
-            return {name: tensor.numpy() for name, tensor in self._rows.read_response(self.client_id).items()}
+            return {name: tensor.numpy() for name, tensor in rows.read_response(self.client_id).items()}
 
 
 class ProfiledService(BatchedInferenceService):
@@ -198,14 +219,15 @@ class ProfiledService(BatchedInferenceService):
     def _serve_shared(self, model: Any, rpc: Any, requests: list[Any]) -> None:
         """Gather, forward, scatter and signal — the same steps as the base class, timed apart."""
         prof = self._prof
+        rows = _require_rows(self._rows, rpc.name, "service")
         client_ids = torch.tensor([cid for (cid, _rid, _name, _payload) in requests], dtype=torch.long)
         with prof.phase("gather"):
-            tensors = self._rows.gather_request(client_ids, self._device)
+            tensors = rows.gather_request(client_ids, self._device)
         with prof.phase("forward"):
             outputs = self._forward(rpc, model, tensors)
         self._mark_all(requests, "computed")
         with prof.phase("scatter"):
-            self._rows.scatter_response(client_ids, outputs)
+            rows.scatter_response(client_ids, outputs)
         with prof.phase("reply"):
             for client_id, request_id, _name, _payload in requests:
                 self._resp_qs[client_id].put((request_id, None))

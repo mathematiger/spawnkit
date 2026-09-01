@@ -98,7 +98,10 @@ convention = "numpy"
 "examples/*" = ["D", "ANN", "T201"]
 
 [tool.mypy]
-files = ["src", "tests", "benchmarks"]
+# Every directory holding Python, so a bare `mypy` and CI cannot check different things. They did:
+# CI passed explicit paths that dropped `benchmarks` and added `scripts`, so four type errors in a
+# benchmark sat green for days while `mypy` locally reported them.
+files = ["src", "tests", "benchmarks", "scripts"]
 ignore_missing_imports = true
 warn_unused_configs = true
 warn_unused_ignores = true

@@ -11,6 +11,12 @@ python -m benchmarks.bench_shutdown  --workers 4 8 16 # teardown strategies
 python -m benchmarks.bench_hygiene   --workers 6      # VRAM held by CPU-only workers (needs a GPU)
 ```
 
+`bench_service.py --profile` splits a round trip into its segments, but needs the `lineprofiler`
+accounting profiler, which is **not on PyPI** and is deliberately not a declared dependency — the
+library itself never imports a profiler, because one that does forces the choice on everyone who
+installs it. Without it the flag raises and says so. No published number comes from a profiled run:
+instrumentation changes the latencies it measures, so `--profile` refuses to write a results file.
+
 ## Re-run them on your machine
 
 Two of the effects depend on how loaded your box is, and the absolutes are machine-specific in any
