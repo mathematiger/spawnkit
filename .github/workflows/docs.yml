@@ -28,16 +28,13 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      # Creates the Pages site if the repository does not have one yet, using the `pages: write`
-      # permission above. Without it every deploy failed with "Failed to create deployment
-      # (status: 404) ... Ensure GitHub Pages has been enabled", because a repository has no Pages
-      # site until something asks for one and nothing here ever did. Skipped on pull requests: a
-      # fork's token is read-only, and enabling Pages is not a pull request's business.
-      - name: Configure Pages
-        if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
+      # This workflow cannot enable Pages for the repository, and must not pretend it can. A
+      # repository has no Pages site until someone asks for one, and until then every deploy fails
+      # with "Failed to create deployment (status: 404) ... Ensure GitHub Pages has been enabled".
+      # `actions/configure-pages` with `enablement: true` was tried and refused: creating a site is
+      # an administrative call, and the workflow's GITHUB_TOKEN gets "Resource not accessible by
+      # integration". So it is a one-time manual setting — Settings → Pages → Source: GitHub
+      # Actions — after which every run here deploys on its own.
 
       # The docs extra only: mkdocstrings reads the package through griffe, which resolves modules
       # from the AST instead of importing them, so the build needs neither torch nor a CUDA runtime.
