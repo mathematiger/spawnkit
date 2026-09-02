@@ -69,6 +69,11 @@ packages = ["src/spawnkit"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repository root on sys.path, so `import benchmarks` resolves. Without it a bare `pytest` and
+# `python -m pytest` disagree: the latter puts the working directory on the path and the former does
+# not, so the benchmark-harness test collected locally and raised ModuleNotFoundError in CI, which
+# runs the bare command. Setting it here makes the two invocations identical for everyone.
+pythonpath = ["."]
 markers = [
     "gpu: needs a CUDA device (deselected in CI with -m 'not gpu')",
     "slow: takes more than a couple of seconds",

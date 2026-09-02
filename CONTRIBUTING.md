@@ -26,9 +26,14 @@ All four must pass locally. CI runs the same commands on Python 3.10 through 3.1
 ```bash
 .venv/bin/python scripts/hygiene_gate.py       # forbidden-string gate; must exit 0
 .venv/bin/ruff check .
-.venv/bin/mypy src tests scripts
-.venv/bin/python -m pytest -q -m "not gpu"
+.venv/bin/mypy                                 # the paths come from pyproject's `files`
+PATH="$PWD/.venv/bin:$PATH" scripts/ci_pytest.sh local
 ```
+
+Neither `mypy` nor the test run takes an explicit path or flag here, and that is the point: both
+have drifted from what CI ran before, and green locally then meant red on push. The check set lives
+in `pyproject.toml` and the pytest invocation in `scripts/ci_pytest.sh`, which is the same script
+both CI jobs call.
 
 If you have a CUDA device, also run the GPU-marked tests:
 
